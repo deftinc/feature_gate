@@ -3,9 +3,9 @@ services:
   mongo:
     image: mongo:7
     environment:
-      MONGO_INITDB_ROOT_USERNAME: featuregate
-      MONGO_INITDB_ROOT_PASSWORD: featuregate
-      MONGO_INITDB_DATABASE: featuregate
+      MONGO_INITDB_ROOT_USERNAME: feature_gate
+      MONGO_INITDB_ROOT_PASSWORD: feature_gate
+      MONGO_INITDB_DATABASE: feature_gate
     ports:
       - 27017:27017
     volumes:
