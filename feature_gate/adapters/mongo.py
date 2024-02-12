@@ -3,9 +3,22 @@ from pymongo.collection import Collection
 from pymongo.cursor import Cursor
 
 class MongoAdapter:
+
   def __init__(self, collection: Collection):
     self.collection: Collection = collection
     self.features_key: str = '__featuregate_internals__'
+
+  def add(self, feature) -> bool:
+    self._update(self.features_key, {'$addToSet': {'features': feature.key}})
+    return True
+
+  def remove(self, feature) -> bool:
+    self._update(self.features_key, {'$pull': {'features': feature.key}})
+    self.clear(feature)
+    return True
+
+  def features(self) -> typing.List[str]:
+      return self._read_feature_keys()['features']
 
   def is_enabled(self, feature: str, actor) -> bool:
     raise NotImplementedError
@@ -55,9 +68,6 @@ class MongoAdapter:
   def disable_percentage_of_time(self, feature: str, percentage: int):
     raise NotImplementedError
 
-  def features(self) -> typing.List[str]:
-    return self._read_feature_keys()['features']
-
   def feature(self):
     raise NotImplementedError
 
@@ -72,15 +82,6 @@ class MongoAdapter:
 
   def adapter(self):
     raise NotImplementedError
-
-  def add(self, feature) -> bool:
-    self._update(self.features_key, {'$addToSet': {'features': feature.key}})
-    return True
-
-  def remove(self, feature) -> bool:
-    self._update(self.features_key, {'$pull': {'features': feature.key}})
-    self.clear(feature)
-    return True
 
   def clear(self, feature):
     self._delete(feature.key)

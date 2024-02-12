@@ -1,7 +1,18 @@
 class Client:
-  def __init__(self, collection):
-    print("1")
-    return None
+  def __init__(self, adapter):
+    self.adapter = adapter
+
+  def adapter(self):
+    return self.adapter
+
+  def add(self, feature):
+    return self.adapter.add(feature)
+
+  def remove(self, feature):
+    return self.adapter.remove(feature)
+
+  def features(self):
+    return self.adapter.features()
 
   def is_enabled(self, feature, actor):
     raise NotImplementedError
@@ -51,9 +62,6 @@ class Client:
   def disable_percentage_of_time(self, feature, percentage):
     raise NotImplementedError
 
-  def features(self):
-    raise NotImplementedError
-
   def feature(self):
     raise NotImplementedError
 
@@ -67,12 +75,6 @@ class Client:
     raise NotImplementedError
 
   def adapter(self):
-    raise NotImplementedError
-
-  def add(self):
-    raise NotImplementedError
-
-  def remove(self):
     raise NotImplementedError
 
   def do_import(self):

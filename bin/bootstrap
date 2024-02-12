@@ -5,8 +5,8 @@ source bin/functions.sh
 
 brew_bundle_install
 asdf_bootstrap
-./bin/update
 python_install_pipx
 python_update_pip
 python_install_poetry
 python_add_home_local_bin_to_path_in_bash_profile
+./bin/update

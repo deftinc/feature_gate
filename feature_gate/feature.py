@@ -1,7 +1,8 @@
 class Feature:
-  def __init__(self, name, key, adapter, instrumenter):
+  def __init__(self, name, key, description, adapter, instrumenter):
     self._name = name
     self._key = key
+    self._description = description
     self._adapter = adapter
     self._instrumenter = instrumenter
 
@@ -12,6 +13,10 @@ class Feature:
   @property
   def key(self):
     return self._key
+
+  @property
+  def description(self):
+    return self._description
 
   @property
   def adapter(self):

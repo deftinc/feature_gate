@@ -1,6 +1,21 @@
+from feature_gate.clients.posthog import PosthogAPI
 class PosthogAdapter:
-  def __init__(self, collection):
-    raise NotImplementedError
+  def __init__(self, api_key, project_id):
+    self.client = PosthogAPI(api_key, project_id)
+
+  def client(self):
+    return self.client
+
+  def add(self, feature):
+    return self.client.create_feature(feature.key, feature.description)
+
+  def remove(self, feature_key):
+    return self.client.delete_feature(feature_key)
+
+  def features(self):
+    resp = self.client.list_features()
+    key='key'
+    return [item[key] for item in resp["data"] if key in item]
 
   def is_enabled(self, feature, actor):
     raise NotImplementedError
@@ -50,9 +65,6 @@ class PosthogAdapter:
   def disable_percentage_of_time(self, feature, percentage):
     raise NotImplementedError
 
-  def features(self):
-    raise NotImplementedError
-
   def feature(self):
     raise NotImplementedError
 
@@ -66,12 +78,6 @@ class PosthogAdapter:
     raise NotImplementedError
 
   def adapter(self):
-    raise NotImplementedError
-
-  def add(self):
-    raise NotImplementedError
-
-  def remove(self):
     raise NotImplementedError
 
   def do_import(self):
