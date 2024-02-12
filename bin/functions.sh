@@ -131,7 +131,7 @@ python_add_home_local_bin_to_path_in_bash_profile() {
     echo "$bin_local_path is already in the PATH variable."
   else
     echo "Adding $bin_local_path to .bash_profile you'll need to run 'source ~/.bash_profile'"
-    echo 'export PATH="$PATH:/Users/thephw/.local/bin" # Python' >> $HOME/.bash_profile
+    echo 'export PATH="$PATH:${HOME}/.local/bin" # Python' >> $HOME/.bash_profile
   fi
 }
 
