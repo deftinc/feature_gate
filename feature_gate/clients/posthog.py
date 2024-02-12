@@ -76,6 +76,39 @@ class PosthogAPI:
         response = self._patch(path, payload)
         return self._map_single_response(response)
 
+  def is_enabled(self, key):
+    feature = self.fetch_feature(key)
+    if feature == None:
+      raise Exception(f"Feature {key} not found")
+    else:
+      return feature["active"]
+
+  def enable_feature(self, key):
+    feature = self.fetch_feature(key)
+    if feature == None:
+      raise Exception(f"Feature {key} not found")
+    else:
+      path = f'/api/projects/{self.project_id}/feature_flags/{feature["id"]}'
+      with bound_contextvars(method="enable_feature"):
+        payload = {
+          'active': True
+        }
+        response = self._patch(path, payload)
+        return self._map_single_response(response)
+
+  def disable_feature(self, key):
+    feature = self.fetch_feature(key)
+    if feature == None:
+      raise Exception(f"Feature {key} not found")
+    else:
+      path = f'/api/projects/{self.project_id}/feature_flags/{feature["id"]}'
+      with bound_contextvars(method="disable_feature"):
+        payload = {
+          'active': False
+        }
+        response = self._patch(path, payload)
+        return self._map_single_response(response)
+
   def _get(self, path):
     with bound_contextvars(method="get"):
       url = f"{self.host}{path}"

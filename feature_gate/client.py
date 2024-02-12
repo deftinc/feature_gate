@@ -14,14 +14,14 @@ class Client:
   def features(self):
     return self.adapter.features()
 
-  def is_enabled(self, feature, actor):
-    raise NotImplementedError
+  def is_enabled(self, feature):
+    return self.adapter.is_enabled(feature)
 
   def enable(self, feature):
-    raise NotImplementedError
+    return self.adapter.enable(feature)
 
   def disable(self, feature):
-    raise NotImplementedError
+    return self.adapter.disable(feature)
 
   def enable_expression(self, expression):
     raise NotImplementedError

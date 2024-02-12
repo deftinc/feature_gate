@@ -17,14 +17,14 @@ class PosthogAdapter:
     key='key'
     return [item[key] for item in resp["data"] if key in item]
 
-  def is_enabled(self, feature, actor):
-    raise NotImplementedError
+  def is_enabled(self, feature_key):
+    return self.client.is_enabled(feature_key)
 
-  def enable(self, feature):
-    raise NotImplementedError
+  def enable(self, feature_key):
+    return self.client.enable_feature(feature_key)
 
-  def disable(self, feature):
-    raise NotImplementedError
+  def disable(self, feature_key):
+    return self.client.disable_feature(feature_key)
 
   def enable_expression(self, expression):
     raise NotImplementedError
