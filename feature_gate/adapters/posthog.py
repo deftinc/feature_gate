@@ -1,4 +1,4 @@
-from feature_gate.clients.posthog import PosthogAPI
+from feature_gate.clients.posthog_api_client import PosthogAPI
 class PosthogAdapter:
   def __init__(self, api_key, project_id):
     self.client = PosthogAPI(api_key, project_id)
@@ -7,7 +7,9 @@ class PosthogAdapter:
     return self.client
 
   def add(self, feature):
-    return self.client.create_feature(feature.key, feature.description)
+    if self.client.fetch_feature(feature.key) == None:
+      self.client.create_feature(feature.key, feature.description)
+    return True
 
   def remove(self, feature_key):
     return self.client.delete_feature(feature_key)

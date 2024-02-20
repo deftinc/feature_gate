@@ -2,17 +2,16 @@ import os
 import importlib
 import feature_gate.client
 import feature_gate.clients
-import feature_gate.clients.posthog
+import feature_gate.clients.posthog_api_client
 import feature_gate.feature
 import feature_gate.adapters
 import feature_gate.adapters.mongo
 import feature_gate.adapters.posthog
 
-from pymongo import MongoClient
 from feature_gate.adapters.mongo import MongoAdapter
 from feature_gate.adapters.posthog import PosthogAdapter
 from feature_gate.client import Client
-from feature_gate.clients.posthog import PosthogAPI
+from feature_gate.clients.posthog_api_client import PosthogAPI
 from feature_gate.feature import Feature
 
 def posthog_client() -> Client:

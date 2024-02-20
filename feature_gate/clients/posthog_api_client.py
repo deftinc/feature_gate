@@ -1,12 +1,10 @@
 import json
-import logging
 import requests
 import structlog
 from pathlib import Path
 
 from structlog.contextvars import (
     bind_contextvars,
-    clear_contextvars,
     merge_contextvars,
     bound_contextvars,
 )
@@ -42,7 +40,7 @@ class PosthogAPI:
     path = f'/api/projects/{self.project_id}/feature_flags'
     with bound_contextvars(method="list_features"):
       response = self._get(path)
-      return self._map_list_response(response)
+      return self._map_list_response("GET", path, response)
 
   def create_feature(self, name, description, deleted=False, active=False):
     with bound_contextvars(method="create_feature"):
@@ -54,7 +52,7 @@ class PosthogAPI:
         'active': active
       }
       response = self._post(path, payload)
-      return self._map_single_response(response)
+      return self._map_single_response("POST", path, response)
 
   def fetch_feature(self, key):
     features = self.list_features()["data"]
@@ -74,7 +72,7 @@ class PosthogAPI:
           'deleted': True
         }
         response = self._patch(path, payload)
-        return self._map_single_response(response)
+        return self._map_single_response("PATCH", path, response)
 
   def is_enabled(self, key):
     feature = self.fetch_feature(key)
@@ -94,7 +92,7 @@ class PosthogAPI:
           'active': True
         }
         response = self._patch(path, payload)
-        return self._map_single_response(response)
+        return self._map_single_response("PATCH", path, response)
 
   def disable_feature(self, key):
     feature = self.fetch_feature(key)
@@ -107,7 +105,7 @@ class PosthogAPI:
           'active': False
         }
         response = self._patch(path, payload)
-        return self._map_single_response(response)
+        return self._map_single_response("PATCH", path, response)
 
   def _get(self, path):
     with bound_contextvars(method="get"):
@@ -116,22 +114,27 @@ class PosthogAPI:
         "Content-Type": "application/json",
         "Authorization": f"Bearer {self.api_key}"
       }
-      return requests.get(url, headers=headers)
+      response = requests.get(url, headers=headers)
+      print(f"GET {url}\n{response}")
+      return response
 
   def _post(self, path, payload):
     url = f"{self.host}{path}"
     with bound_contextvars(method="post", url=url):
       json_payload = json.dumps(payload)
       headers = self._get_headers()
-      return requests.post(url, data=json_payload, headers=headers)
-
+      response = requests.post(url, data=json_payload, headers=headers)
+      print(f"POST {url}\n{response}")
+      return response
 
   def _patch(self, path, payload):
     url = f"{self.host}{path}"
     with bound_contextvars(method="patch", url=url):
       json_payload = json.dumps(payload)
       headers = self._get_headers()
-      return requests.patch(url, data=json_payload, headers=headers)
+      response = requests.patch(url, data=json_payload, headers=headers)
+      print(f"PATCH {url}\n{response}")
+      return response
 
   def _get_headers(self):
     return {
@@ -139,27 +142,30 @@ class PosthogAPI:
       "Authorization": f"Bearer {self.api_key}"
     }
 
-  def _map_single_response(self, response):
+  def _check_status_ok(self, code):
+    return code == 200 or code == 201
+
+  def _map_single_response(self, method, path, response):
     ret = None
-    if response.status_code == 200 or response.status_code == 201:
+    if self._check_status_ok(response.status_code):
         data = response.json()
-        self.logger.info("request successful", status_code=response.status_code, response=data)
+        self.logger.info("request successful", method=method, path=path, status_code=response.status_code, response=data)
         ret = self._map_single_response_success(data)
     else:
         data = response.json()
-        self.logger.info("request failed", status_code=response.status_code, response=data)
+        self.logger.info("request failed", method=method, path=path, status_code=response.status_code, response=data)
         ret = self._map_error_response(response.status_code, data)
     return ret
 
-  def _map_list_response(self, response):
+  def _map_list_response(self, method, path, response):
     ret = None
-    if response.status_code == 200 or response.status_code == 201:
+    if self._check_status_ok(response.status_code):
         data = response.json()
-        self.logger.info("request successful", status_code=response.status_code, response=data)
+        self.logger.info("request successful", method=method, path=path, status_code=response.status_code, response=data)
         ret = self._map_list_response_success(data)
     else:
         data = response.json()
-        self.logger.info("request failed", status_code=response.status_code, response=data)
+        self.logger.info("request failed", method=method, path=path, status_code=response.status_code, response=data)
         ret = self._map_error_response(response.status_code, data)
     return ret
 
