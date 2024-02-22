@@ -13,9 +13,8 @@ keywords = ["feature flags", "feature gate"]
 
 [tool.poetry.dependencies]
 python = ">= 3.10"
-pymongo = "^4.6.1"
-posthog = ">= 2.2.0"
 structlog = "^24.1.0"
+requests = "^2.31.0"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^8.0.0"
