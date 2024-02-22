@@ -11,5 +11,5 @@ from pymongo import MongoClient
 from feature_gate.adapters.posthog import PosthogAdapter
 from feature_gate.adapters.mongo import MongoAdapter
 from feature_gate.client import Client
-from feature_gate.clients.posthog_api_client import PosthogAPI
+from feature_gate.clients.posthog_api_client import PosthogAPIClient
 from feature_gate.feature import Feature

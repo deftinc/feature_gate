@@ -2,6 +2,7 @@ import json
 import requests
 import structlog
 from pathlib import Path
+from requests.exceptions import ConnectionError
 
 from structlog.contextvars import (
     bind_contextvars,
@@ -9,13 +10,24 @@ from structlog.contextvars import (
     bound_contextvars,
 )
 
-class PosthogAPI:
-  def __init__(self, api_key, project_id):
-    self.api_key = api_key
-    self.host='https://app.posthog.com'
-    self.project_id = project_id
+class PosthogAPIClient:
+  def __init__(self, api_base=None, api_key=None, project_id=None):
+    if api_base is None:
+      self.api_base = os.environ.get("POSTHOG_API_BASE", "https://app.posthog.com")
+    else:
+      self.api_base = api_base
 
-    bind_contextvars(klass="PosthogAPI", project_id=project_id)
+    if api_key is None:
+      self.api_key = os.environ.get('POSTHOG_API_KEY')
+    else:
+      self.api_key = api_key
+
+    if project_id is None:
+      self.project_id = os.environ.get('POSTHOG_PROJECT_ID')
+    else:
+      self.project_id = project_id
+
+    bind_contextvars(klass="PosthogAPIClient", project_id=project_id)
     structlog.configure(
       processors=[
         merge_contextvars,
@@ -29,6 +41,9 @@ class PosthogAPI:
       ),
     )
     self.logger = structlog.get_logger()
+
+  def api_base(self):
+    return self.api_base
 
   def api_key(self):
      return self.api_key
@@ -108,8 +123,14 @@ class PosthogAPI:
         return self._map_single_response("PATCH", path, response)
 
   def _get(self, path):
+    try:
+      return self.__get(path)
+    except requests.exceptions.ConnectionError as err:
+      self._log_posthog_connection_error(err)
+
+  def __get(self, path):
     with bound_contextvars(method="get"):
-      url = f"{self.host}{path}"
+      url = f"{self.api_base}{path}"
       headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {self.api_key}"
@@ -119,7 +140,13 @@ class PosthogAPI:
       return response
 
   def _post(self, path, payload):
-    url = f"{self.host}{path}"
+    try:
+      return self.__post(path, payload)
+    except requests.exceptions.ConnectionError as err:
+      self._log_posthog_connection_error(err)
+
+  def __post(self, path, payload):
+    url = f"{self.api_base}{path}"
     with bound_contextvars(method="post", url=url):
       json_payload = json.dumps(payload)
       headers = self._get_headers()
@@ -128,7 +155,13 @@ class PosthogAPI:
       return response
 
   def _patch(self, path, payload):
-    url = f"{self.host}{path}"
+    try:
+      return self.__patch(path, payload)
+    except ConnectionError as err:
+      self._log_posthog_connection_error(err)
+
+  def __patch(self, path, payload):
+    url = f"{self.api_base}{path}"
     with bound_contextvars(method="patch", url=url):
       json_payload = json.dumps(payload)
       headers = self._get_headers()
@@ -194,3 +227,7 @@ class PosthogAPI:
         "previous": data.get("previous")
       }
     }
+
+  def _log_posthog_connection_error(self, error):
+    self.logger.error(f"Posthog connection error\n{error}")
+    raise error
