@@ -1,3 +1,6 @@
+class FeatureNotFound(ValueError):
+  pass
+
 class Client:
   def __init__(self, adapter):
     self.adapter = adapter

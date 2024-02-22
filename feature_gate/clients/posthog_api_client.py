@@ -1,14 +1,19 @@
 import json
+import os
 import requests
 import structlog
+
 from pathlib import Path
-from requests.exceptions import ConnectionError
+from feature_gate.client import FeatureNotFound
 
 from structlog.contextvars import (
     bind_contextvars,
     merge_contextvars,
     bound_contextvars,
 )
+
+class PosthogAPIClientError(Exception):
+  pass
 
 class PosthogAPIClient:
   def __init__(self, api_base=None, api_key=None, project_id=None):
@@ -79,7 +84,7 @@ class PosthogAPIClient:
   def delete_feature(self, key):
     feature = self.fetch_feature(key)
     if feature == None:
-      raise Exception(f"Feature {key} not found")
+      raise FeatureNotFound(f"Feature {key} not found")
     else:
       path = f'/api/projects/{self.project_id}/feature_flags/{feature["id"]}'
       with bound_contextvars(method="delete_feature"):
@@ -92,14 +97,14 @@ class PosthogAPIClient:
   def is_enabled(self, key):
     feature = self.fetch_feature(key)
     if feature == None:
-      raise Exception(f"Feature {key} not found")
+      raise FeatureNotFound(f"Feature {key} not found")
     else:
       return feature["active"]
 
   def enable_feature(self, key):
     feature = self.fetch_feature(key)
     if feature == None:
-      raise Exception(f"Feature {key} not found")
+      raise FeatureNotFound(f"Feature {key} not found")
     else:
       path = f'/api/projects/{self.project_id}/feature_flags/{feature["id"]}'
       with bound_contextvars(method="enable_feature"):
@@ -112,7 +117,7 @@ class PosthogAPIClient:
   def disable_feature(self, key):
     feature = self.fetch_feature(key)
     if feature == None:
-      raise Exception(f"Feature {key} not found")
+      raise FeatureNotFound(f"Feature {key} not found")
     else:
       path = f'/api/projects/{self.project_id}/feature_flags/{feature["id"]}'
       with bound_contextvars(method="disable_feature"):
@@ -125,7 +130,7 @@ class PosthogAPIClient:
   def _get(self, path):
     try:
       return self.__get(path)
-    except requests.exceptions.ConnectionError as err:
+    except requests.ConnectionError as err:
       self._log_posthog_connection_error(err)
 
   def __get(self, path):
@@ -136,13 +141,12 @@ class PosthogAPIClient:
         "Authorization": f"Bearer {self.api_key}"
       }
       response = requests.get(url, headers=headers)
-      print(f"GET {url}\n{response}")
       return response
 
   def _post(self, path, payload):
     try:
       return self.__post(path, payload)
-    except requests.exceptions.ConnectionError as err:
+    except requests.ConnectionError as err:
       self._log_posthog_connection_error(err)
 
   def __post(self, path, payload):
@@ -151,13 +155,12 @@ class PosthogAPIClient:
       json_payload = json.dumps(payload)
       headers = self._get_headers()
       response = requests.post(url, data=json_payload, headers=headers)
-      print(f"POST {url}\n{response}")
       return response
 
   def _patch(self, path, payload):
     try:
       return self.__patch(path, payload)
-    except ConnectionError as err:
+    except requests.ConnectionError as err:
       self._log_posthog_connection_error(err)
 
   def __patch(self, path, payload):
@@ -166,7 +169,6 @@ class PosthogAPIClient:
       json_payload = json.dumps(payload)
       headers = self._get_headers()
       response = requests.patch(url, data=json_payload, headers=headers)
-      print(f"PATCH {url}\n{response}")
       return response
 
   def _get_headers(self):
@@ -229,5 +231,5 @@ class PosthogAPIClient:
     }
 
   def _log_posthog_connection_error(self, error):
-    self.logger.error(f"Posthog connection error\n{error}")
-    raise error
+    self.logger.error(f"Posthog connection error - {error}")
+    raise PosthogAPIClientError(f"Posthog connection error - {error}")

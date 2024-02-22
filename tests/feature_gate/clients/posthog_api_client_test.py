@@ -1,12 +1,9 @@
 import pytest
-import json
-import os
-from feature_gate.clients.posthog_api_client import PosthogAPIClient
-from feature_gate.feature import Feature
-from tests.fixtures.null_adapter import NullAdapter
-from unittest.mock import Mock, patch
-from tests.fixtures.posthog_api_client.mocks import build_feature_from_mocks, load_response, mock_add_feature_funnel, mock_disable_feature_funnel, mock_enable_feature_funnel, mock_features_when_empty, mock_features_when_funnel, mock_funnel_is_disabled, mock_funnel_is_enabled, mock_remove_feature_funnel
 import requests
+
+from feature_gate.clients.posthog_api_client import PosthogAPIClient, PosthogAPIClientError
+from tests.fixtures.posthog_api_client.mocks import build_feature_from_mocks, load_response, mock_add_feature_funnel, mock_disable_feature_funnel, mock_enable_feature_funnel, mock_features_when_empty, mock_features_when_funnel, mock_funnel_is_disabled, mock_funnel_is_enabled, mock_remove_feature_funnel
+from unittest.mock import patch
 
 def configured_client():
   return PosthogAPIClient(api_key="api_key", project_id="project_id")
@@ -121,7 +118,19 @@ def test_is_enabled_raises_exception_when_not_found():
       client.is_enabled(feature.key)
     assert str(e.value) == f"Feature {feature.key} not found"
 
-def test_log_error_on_posthog_connection():
+def test_raise_posthog_api_client_error_on_conncetion_errors():
   with patch.object(requests, 'get', side_effect=requests.ConnectionError('Mocked error')):
-    with patch.object(PosthogAPIClient, '_log_posthog_connection_error') as mock_log:
-      mock_log.assert_called_once
+    try:
+      client = configured_client()
+      client.list_features()
+    except PosthogAPIClientError as e:
+      assert str(e) == "Posthog connection error - Mocked error"
+
+def test_log_errors_on_posthog_connection():
+  client = configured_client()
+  with patch.object(requests, 'get', side_effect=requests.ConnectionError('Mocked error')):
+    with patch.object(client.logger, 'error', side_effect=PosthogAPIClientError()) as mock_log:
+      try:
+        client.list_features()
+      except PosthogAPIClientError as e:
+        mock_log.assert_called_once()
