@@ -3,7 +3,11 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 source bin/functions.sh
 
-VERSION=$(cat ./VERSION | tr -d '[:space:]')
+VERSION="v$(cat ./VERSION | tr -d '[:space:]')"
+
+echo "Getting latest from origin main"
+git fetch --all
+git checkout main && git pull
 
 echo "Creating github tag"
 git tag $VERSION
