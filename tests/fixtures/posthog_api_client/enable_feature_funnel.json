@@ -1,0 +1,38 @@
+{
+  "id": 31868,
+  "name": "This is a feature flag tests a conversion funnel",
+  "key": "funnel_test",
+  "filters": {
+    "groups": [
+      {
+        "properties": [],
+        "rollout_percentage": null
+      }
+    ]
+  },
+  "deleted": false,
+  "active": true,
+  "created_by": {
+    "id": 67712,
+    "uuid": "018c6fd5-f1e1-0000-1728-e179216d89d8",
+    "distinct_id": "3Fe3MHNXZTaunpiJPIu8t1qByAdSS5jFxJg3XDhGx6z",
+    "first_name": "Patrick",
+    "last_name": "Wiseman",
+    "email": "patrick@deft.services",
+    "is_email_verified": true
+  },
+  "created_at": "2024-02-20T23:13:59.540289Z",
+  "is_simple_flag": true,
+  "rollout_percentage": null,
+  "ensure_experience_continuity": false,
+  "experiment_set": [],
+  "surveys": [],
+  "features": [],
+  "rollback_conditions": null,
+  "performed_rollback": false,
+  "can_edit": true,
+  "usage_dashboard": 138166,
+  "analytics_dashboards": [],
+  "has_enriched_analytics": false,
+  "tags": []
+}

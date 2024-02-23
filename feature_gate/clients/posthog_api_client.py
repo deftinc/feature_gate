@@ -1,23 +1,38 @@
 import json
-import logging
+import os
 import requests
 import structlog
+
 from pathlib import Path
+from feature_gate.client import FeatureNotFound
 
 from structlog.contextvars import (
     bind_contextvars,
-    clear_contextvars,
     merge_contextvars,
     bound_contextvars,
 )
 
-class PosthogAPI:
-  def __init__(self, api_key, project_id):
-    self.api_key = api_key
-    self.host='https://app.posthog.com'
-    self.project_id = project_id
+class PosthogAPIClientError(Exception):
+  pass
 
-    bind_contextvars(klass="PosthogAPI", project_id=project_id)
+class PosthogAPIClient:
+  def __init__(self, api_base=None, api_key=None, project_id=None):
+    if api_base is None:
+      self.api_base = os.environ.get("POSTHOG_API_BASE", "https://app.posthog.com")
+    else:
+      self.api_base = api_base
+
+    if api_key is None:
+      self.api_key = os.environ.get('POSTHOG_API_KEY')
+    else:
+      self.api_key = api_key
+
+    if project_id is None:
+      self.project_id = os.environ.get('POSTHOG_PROJECT_ID')
+    else:
+      self.project_id = project_id
+
+    bind_contextvars(klass="PosthogAPIClient", project_id=project_id)
     structlog.configure(
       processors=[
         merge_contextvars,
@@ -32,6 +47,9 @@ class PosthogAPI:
     )
     self.logger = structlog.get_logger()
 
+  def api_base(self):
+    return self.api_base
+
   def api_key(self):
      return self.api_key
 
@@ -42,7 +60,7 @@ class PosthogAPI:
     path = f'/api/projects/{self.project_id}/feature_flags'
     with bound_contextvars(method="list_features"):
       response = self._get(path)
-      return self._map_list_response(response)
+      return self._map_list_response("GET", path, response)
 
   def create_feature(self, name, description, deleted=False, active=False):
     with bound_contextvars(method="create_feature"):
@@ -54,7 +72,7 @@ class PosthogAPI:
         'active': active
       }
       response = self._post(path, payload)
-      return self._map_single_response(response)
+      return self._map_single_response("POST", path, response)
 
   def fetch_feature(self, key):
     features = self.list_features()["data"]
@@ -66,7 +84,7 @@ class PosthogAPI:
   def delete_feature(self, key):
     feature = self.fetch_feature(key)
     if feature == None:
-      raise Exception(f"Feature {key} not found")
+      raise FeatureNotFound(f"Feature {key} not found")
     else:
       path = f'/api/projects/{self.project_id}/feature_flags/{feature["id"]}'
       with bound_contextvars(method="delete_feature"):
@@ -74,19 +92,19 @@ class PosthogAPI:
           'deleted': True
         }
         response = self._patch(path, payload)
-        return self._map_single_response(response)
+        return self._map_single_response("PATCH", path, response)
 
   def is_enabled(self, key):
     feature = self.fetch_feature(key)
     if feature == None:
-      raise Exception(f"Feature {key} not found")
+      raise FeatureNotFound(f"Feature {key} not found")
     else:
       return feature["active"]
 
   def enable_feature(self, key):
     feature = self.fetch_feature(key)
     if feature == None:
-      raise Exception(f"Feature {key} not found")
+      raise FeatureNotFound(f"Feature {key} not found")
     else:
       path = f'/api/projects/{self.project_id}/feature_flags/{feature["id"]}'
       with bound_contextvars(method="enable_feature"):
@@ -94,12 +112,12 @@ class PosthogAPI:
           'active': True
         }
         response = self._patch(path, payload)
-        return self._map_single_response(response)
+        return self._map_single_response("PATCH", path, response)
 
   def disable_feature(self, key):
     feature = self.fetch_feature(key)
     if feature == None:
-      raise Exception(f"Feature {key} not found")
+      raise FeatureNotFound(f"Feature {key} not found")
     else:
       path = f'/api/projects/{self.project_id}/feature_flags/{feature["id"]}'
       with bound_contextvars(method="disable_feature"):
@@ -107,31 +125,51 @@ class PosthogAPI:
           'active': False
         }
         response = self._patch(path, payload)
-        return self._map_single_response(response)
+        return self._map_single_response("PATCH", path, response)
 
   def _get(self, path):
+    try:
+      return self.__get(path)
+    except requests.ConnectionError as err:
+      self._log_posthog_connection_error(err)
+
+  def __get(self, path):
     with bound_contextvars(method="get"):
-      url = f"{self.host}{path}"
+      url = f"{self.api_base}{path}"
       headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {self.api_key}"
       }
-      return requests.get(url, headers=headers)
+      response = requests.get(url, headers=headers)
+      return response
 
   def _post(self, path, payload):
-    url = f"{self.host}{path}"
+    try:
+      return self.__post(path, payload)
+    except requests.ConnectionError as err:
+      self._log_posthog_connection_error(err)
+
+  def __post(self, path, payload):
+    url = f"{self.api_base}{path}"
     with bound_contextvars(method="post", url=url):
       json_payload = json.dumps(payload)
       headers = self._get_headers()
-      return requests.post(url, data=json_payload, headers=headers)
-
+      response = requests.post(url, data=json_payload, headers=headers)
+      return response
 
   def _patch(self, path, payload):
-    url = f"{self.host}{path}"
+    try:
+      return self.__patch(path, payload)
+    except requests.ConnectionError as err:
+      self._log_posthog_connection_error(err)
+
+  def __patch(self, path, payload):
+    url = f"{self.api_base}{path}"
     with bound_contextvars(method="patch", url=url):
       json_payload = json.dumps(payload)
       headers = self._get_headers()
-      return requests.patch(url, data=json_payload, headers=headers)
+      response = requests.patch(url, data=json_payload, headers=headers)
+      return response
 
   def _get_headers(self):
     return {
@@ -139,27 +177,30 @@ class PosthogAPI:
       "Authorization": f"Bearer {self.api_key}"
     }
 
-  def _map_single_response(self, response):
+  def _check_status_ok(self, code):
+    return code == 200 or code == 201
+
+  def _map_single_response(self, method, path, response):
     ret = None
-    if response.status_code == 200 or response.status_code == 201:
+    if self._check_status_ok(response.status_code):
         data = response.json()
-        self.logger.info("request successful", status_code=response.status_code, response=data)
+        self.logger.info("request successful", method=method, path=path, status_code=response.status_code, response=data)
         ret = self._map_single_response_success(data)
     else:
         data = response.json()
-        self.logger.info("request failed", status_code=response.status_code, response=data)
+        self.logger.info("request failed", method=method, path=path, status_code=response.status_code, response=data)
         ret = self._map_error_response(response.status_code, data)
     return ret
 
-  def _map_list_response(self, response):
+  def _map_list_response(self, method, path, response):
     ret = None
-    if response.status_code == 200 or response.status_code == 201:
+    if self._check_status_ok(response.status_code):
         data = response.json()
-        self.logger.info("request successful", status_code=response.status_code, response=data)
+        self.logger.info("request successful", method=method, path=path, status_code=response.status_code, response=data)
         ret = self._map_list_response_success(data)
     else:
         data = response.json()
-        self.logger.info("request failed", status_code=response.status_code, response=data)
+        self.logger.info("request failed", method=method, path=path, status_code=response.status_code, response=data)
         ret = self._map_error_response(response.status_code, data)
     return ret
 
@@ -188,3 +229,7 @@ class PosthogAPI:
         "previous": data.get("previous")
       }
     }
+
+  def _log_posthog_connection_error(self, error):
+    self.logger.error(f"Posthog connection error - {error}")
+    raise PosthogAPIClientError(f"Posthog connection error - {error}")
