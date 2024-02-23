@@ -8,7 +8,7 @@ from tests.fixtures.posthog_api_client.mocks import build_feature_from_mocks, mo
 from unittest.mock import patch
 
 def configured_client():
-  adapter = PosthogAdapter("api_key", "project_id")
+  adapter = PosthogAdapter(api_key="api_key", project_id="project_id")
   client = Client(adapter)
   return client
 

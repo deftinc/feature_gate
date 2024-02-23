@@ -1,6 +1,6 @@
 from feature_gate.clients.posthog_api_client import PosthogAPIClient
 class PosthogAdapter:
-  def __init__(self, api_key, project_id):
+  def __init__(self, api_key=None, project_id=None):
     self.client = PosthogAPIClient(api_key=api_key, project_id=project_id)
 
   def client(self):

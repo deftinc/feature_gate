@@ -15,7 +15,7 @@ from feature_gate.clients.posthog_api_client import PosthogAPIClient
 from feature_gate.feature import Feature
 
 def posthog_client() -> Client:
-  adapter = PosthogAdapter(posthog_api_key, posthog_project_id)
+  adapter = PosthogAdapter()
   return Client(adapter)
 
 def mongo_client() -> Client:
