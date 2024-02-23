@@ -6,7 +6,7 @@ source bin/functions.sh
 VERSION="v$(cat ./VERSION | tr -d '[:space:]')"
 
 describe "Checking version against pyproject.toml"
-PYPROJECT_VERSION=$(cat pyproject.toml | grep 'version = ' | awk '{print $3}')
+PYPROJECT_VERSION=$(cat pyproject.toml | grep 'version = ' | awk '{print $3}'  | tr -d '"')
 if [ "v$PYPROJECT_VERSION" != "$VERSION" ]; then
   echo "[ERROR] Version in pyproject.toml does not match VERSION file. Fix it and try again."
   exit 1
