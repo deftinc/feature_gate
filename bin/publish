@@ -5,13 +5,20 @@ source bin/functions.sh
 
 VERSION="v$(cat ./VERSION | tr -d '[:space:]')"
 
-echo "Getting latest from origin main"
+describe "Checking version against pyproject.toml"
+PYPROJECT_VERSION=$(cat pyproject.toml | grep 'version = ' | awk '{print $3}')
+if [ "v$PYPROJECT_VERSION" != "$VERSION" ]; then
+  echo "[ERROR] Version in pyproject.toml does not match VERSION file. Fix it and try again."
+  exit 1
+fi
+
+describe "Getting latest from origin main"
 git fetch --all
 git checkout main && git pull
 
-echo "Creating github tag"
+describe "Creating github tag"
 git tag $VERSION
 git push origin $VERSION
 
-echo "Opening GitHub release page"
+describe "Opening GitHub release page"
 open https://github.com/deftinc/feature_gate/releases/new?tag=$VERSION

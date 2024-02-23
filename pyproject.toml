@@ -1,7 +1,7 @@
 
 [tool.poetry]
 name = "feature_gate"
-version = "${file('VERSION')}"
+version = "0.0.1"
 description = "An extensible feature flagging library for Python"
 authors = ["Patrick Wiseman <patrick@deft.services>"]
 maintainers = ["Patrick Wiseman <patrick@deft.services>"]
