@@ -21,7 +21,7 @@ class MemoryAdapter:
         structlog.processors.JSONRenderer(),
       ],
       logger_factory=structlog.WriteLoggerFactory(
-        file=Path("development").with_suffix(".log").open("wt")
+        file=Path("logs").joinpath("development").with_suffix(".log").open("wt")
       ),
     )
     self._logger = structlog.get_logger()

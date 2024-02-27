@@ -42,7 +42,7 @@ class PosthogAPIClient:
         structlog.processors.JSONRenderer(),
       ],
       logger_factory=structlog.WriteLoggerFactory(
-        file=Path("development").with_suffix(".log").open("wt")
+        file=Path("logs").joinpath("development").with_suffix(".log").open("wt")
       ),
     )
     self.logger = structlog.get_logger()
