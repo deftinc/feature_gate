@@ -12,6 +12,9 @@ class MemoryAdapter:
   def __init__(self):
     self._features = []
     bind_contextvars(klass="MemoryAdapter")
+    log_path = Path("logs").joinpath("feature_gate").with_suffix(".log")
+    Path.mkdir(Path("logs"), exist_ok=True)
+    Path.touch(log_path)
     structlog.configure(
       processors=[
         merge_contextvars,
@@ -21,7 +24,7 @@ class MemoryAdapter:
         structlog.processors.JSONRenderer(),
       ],
       logger_factory=structlog.WriteLoggerFactory(
-        file=Path("logs").joinpath("development").with_suffix(".log").open("wt")
+        file=log_path.open("wt")
       ),
     )
     self._logger = structlog.get_logger()
