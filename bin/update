@@ -10,7 +10,8 @@ if [ "$CI" == "true" ]; then
   export KERL_INSTALL_MANPAGES=no
   export MIX_ENV=test
 else
-  docker_services_up
+  echo "RIP docker services"
+  # docker_services_up
 fi
 set -u
 
