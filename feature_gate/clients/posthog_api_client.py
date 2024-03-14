@@ -33,6 +33,10 @@ class PosthogAPIClient:
       self.project_id = project_id
 
     bind_contextvars(klass="PosthogAPIClient", project_id=project_id)
+    project_root = os.environ.get('PROJECT_ROOT', '/srv')
+    logs_dir_path = Path(project_root, 'logs')
+    logs_dir_path.mkdir(parents=True, exist_ok=True)
+    log_file = logs_dir_path.joinpath('development').with_suffix('.log').open('wt')
     structlog.configure(
       processors=[
         merge_contextvars,
@@ -41,9 +45,7 @@ class PosthogAPIClient:
         structlog.processors.dict_tracebacks,
         structlog.processors.JSONRenderer(),
       ],
-      logger_factory=structlog.WriteLoggerFactory(
-        file=Path("logs").joinpath("development").with_suffix(".log").open("wt")
-      ),
+      logger_factory=structlog.WriteLoggerFactory(file=log_file),
     )
     self.logger = structlog.get_logger()
 
