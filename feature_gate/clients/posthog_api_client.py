@@ -77,7 +77,7 @@ class PosthogAPIClient:
       return self._map_single_response("POST", path, response)
 
   def fetch_feature(self, key):
-    features = self.list_features()["data"]
+    features = self.list_features().get("data", {})
     for entry in features:
         if "key" in entry and entry["key"] == key:
             return entry
