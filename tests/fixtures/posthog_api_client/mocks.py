@@ -81,3 +81,11 @@ def mock_funnel_is_disabled():
       return_value=load_response('funnel_is_disabled')
     )
   )
+
+def mock_features_when_error_returned():
+  return Mock(
+    status_code=500,
+    json=Mock(
+      return_value=load_response('get_features_when_empty')
+    )
+  )
