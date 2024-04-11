@@ -4,7 +4,7 @@ import requests
 from feature_gate.adapters.posthog import PosthogAdapter
 from feature_gate.client import Client, FeatureNotFound
 from feature_gate.feature import Feature
-from tests.fixtures.posthog_api_client.mocks import build_feature_from_mocks, mock_add_feature_funnel, mock_disable_feature_funnel, mock_enable_feature_funnel, mock_features_when_empty, mock_features_when_funnel, mock_funnel_is_disabled, mock_funnel_is_enabled, mock_remove_feature_funnel
+from tests.fixtures.posthog_api_client.mocks import build_feature_from_mocks, mock_add_feature_funnel, mock_disable_feature_funnel, mock_enable_feature_funnel, mock_features_when_empty, mock_features_when_error_returned, mock_features_when_funnel, mock_funnel_is_disabled, mock_funnel_is_enabled, mock_remove_feature_funnel
 from unittest.mock import patch
 
 def configured_client():
@@ -82,6 +82,15 @@ def test_is_enabled_raises_an_error_when_the_feature_does_not_exist():
   client = configured_client()
   feature = build_feature_from_mocks()
   with patch.object(requests, 'get', return_value=mock_features_when_empty()):
+    try:
+      resp = client.is_enabled(feature.key)
+    except FeatureNotFound as e:
+      assert str(e) == "Feature funnel_test not found"
+
+def test_is_enabled_raises_an_error_when_the_api_response_returns_an_error_status():
+  client = configured_client()
+  feature = build_feature_from_mocks()
+  with patch.object(requests, 'get', return_value=mock_features_when_error_returned()):
     try:
       resp = client.is_enabled(feature.key)
     except FeatureNotFound as e:
