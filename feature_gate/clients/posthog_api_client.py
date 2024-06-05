@@ -36,7 +36,7 @@ class PosthogAPIClient:
     project_root = os.path.abspath(os.getenv('PROJECT_ROOT', '.'))
     logs_dir_path = Path(project_root, 'logs')
     logs_dir_path.mkdir(parents=True, exist_ok=True)
-    log_file = logs_dir_path.joinpath('development').with_suffix('.log').open('wt')
+    log_file = logs_dir_path.joinpath('development').with_suffix('.log').open('at')
     structlog.configure(
       processors=[
         merge_contextvars,
