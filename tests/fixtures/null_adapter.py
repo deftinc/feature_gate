@@ -2,6 +2,9 @@ class NullAdapter:
   def __init__(self):
     pass
 
+  def logger(self):
+    ""
+
   def add(self, feature):
     pass
 
