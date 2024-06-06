@@ -6,6 +6,9 @@ class PosthogAdapter:
   def client(self):
     return self.client
 
+  def logger(self):
+    return self.client.logger
+
   def add(self, feature):
     if self.client.fetch_feature(feature.key) is None:
       self.client.create_feature(feature.key, feature.description)

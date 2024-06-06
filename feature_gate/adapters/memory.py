@@ -29,6 +29,9 @@ class MemoryAdapter:
     )
     self._logger = structlog.get_logger()
 
+  def logger(self):
+    return self._logger
+
   def add(self, feature):
     self._logger.info("Add feature key={feature.key}")
     if feature.key not in self._features:
