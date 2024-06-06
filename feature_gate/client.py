@@ -13,21 +13,26 @@ class Client:
     return self.logger
 
   def add(self, feature):
+    self.logger.info("add feature", feature=feature)
     return self.adapter.add(feature)
 
   def remove(self, feature):
+    self.logger.info("remove feature", feature=feature)
     return self.adapter.remove(feature)
 
   def features(self):
     return self.adapter.features()
 
   def is_enabled(self, feature):
+    self.logger.info("feature is_endabled", feature=feature)
     return self.adapter.is_enabled(feature)
 
   def enable(self, feature):
+    self.logger.info("enable feature", feature=feature)
     return self.adapter.enable(feature)
 
   def disable(self, feature):
+    self.logger.info("disable feature", feature=feature)
     return self.adapter.disable(feature)
 
   # def enable_expression(self, expression):
