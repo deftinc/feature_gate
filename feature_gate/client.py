@@ -4,10 +4,13 @@ class FeatureNotFound(ValueError):
 class Client:
   def __init__(self, adapter):
     self.adapter = adapter
-    self._logger = adapter.logger
+    self.logger = adapter.logger
 
   def adapter(self):
     return self.adapter
+
+  def logger(self):
+    return self.logger
 
   def add(self, feature):
     return self.adapter.add(feature)
