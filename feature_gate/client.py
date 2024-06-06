@@ -17,8 +17,8 @@ class Client:
   def features(self):
     return self.adapter.features()
 
-  def is_enabled(self, feature):
-    return self.adapter.is_enabled(feature)
+  def is_enabled(self, feature, **kwargs):
+    return self.adapter.is_enabled(feature, **kwargs)
 
   def enable(self, feature):
     return self.adapter.enable(feature)

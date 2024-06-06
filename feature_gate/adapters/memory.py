@@ -57,7 +57,7 @@ class MemoryAdapter:
     self._logger.info("Lists features {features}")
     return features
 
-  def is_enabled(self, feature_key):
+  def is_enabled(self, feature_key, **kwargs):
     for feature in self._features:
       if feature["key"] == feature_key:
         is_enabled = feature["gates"]["boolean"]["enabled"]
