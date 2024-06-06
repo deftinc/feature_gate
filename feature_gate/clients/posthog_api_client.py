@@ -2,6 +2,7 @@ import json
 import os
 import requests
 import structlog
+from posthog import Posthog
 
 from pathlib import Path
 from feature_gate.client import FeatureNotFound
@@ -16,7 +17,7 @@ class PosthogAPIClientError(Exception):
   pass
 
 class PosthogAPIClient:
-  def __init__(self, api_base=None, api_key=None, project_id=None):
+  def __init__(self, api_base=None, api_key=None, project_id=None, poll_interval=30):
     if api_base is None:
       self.api_base = os.environ.get("POSTHOG_API_BASE", "https://app.posthog.com")
     else:
@@ -31,6 +32,12 @@ class PosthogAPIClient:
       self.project_id = os.environ.get('POSTHOG_PROJECT_ID')
     else:
       self.project_id = project_id
+    
+    self.posthog_client = Posthog(project_id,
+                             host=self.api_base,
+                             poll_interval=poll_interval, # local eval refresh interval
+                             personal_api_key=api_key
+    )
 
     bind_contextvars(klass="PosthogAPIClient", project_id=project_id)
     project_root = os.path.abspath(os.getenv('PROJECT_ROOT', '.'))
@@ -57,6 +64,31 @@ class PosthogAPIClient:
 
   def project_id(self):
     return self.project_id
+
+
+  def is_enabled(self, key, user_id=None, person_properties=None, only_evaluate_locally=False, **kwargs):
+    """
+    This uses posthog local evaluation to check if a feature flag is enabled 
+    for a user without making a server request.
+    See local eval docs here: https://posthog.com/docs/feature-flags/local-evaluation
+
+    Args:
+        name (String): the name/key of the feature flag
+        user (User): the user object
+
+    Returns:
+        bool: true or false
+    """
+    return self.posthog_client.get_feature_flag(
+      key,
+      user_id,
+      # Include any person properties, groups, or group properties required to evaluate the flag
+      person_properties=person_properties,
+      # Optional. Defaults to False. Set to True if you don't want PostHog to make a server request if it can't evaluate locally
+      only_evaluate_locally=only_evaluate_locally,
+      **kwargs
+    )
+
 
   def list_features(self):
     path = f'/api/projects/{self.project_id}/feature_flags'
@@ -95,13 +127,6 @@ class PosthogAPIClient:
         }
         response = self._patch(path, payload)
         return self._map_single_response("PATCH", path, response)
-
-  def is_enabled(self, key):
-    feature = self.fetch_feature(key)
-    if feature == None:
-      raise FeatureNotFound(f"Feature {key} not found")
-    else:
-      return feature["active"]
 
   def enable_feature(self, key):
     feature = self.fetch_feature(key)
