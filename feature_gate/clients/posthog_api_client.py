@@ -49,6 +49,9 @@ class PosthogAPIClient:
     )
     self.logger = structlog.get_logger()
 
+  def logger(self):
+    return self.logger
+
   def api_base(self):
     return self.api_base
 
