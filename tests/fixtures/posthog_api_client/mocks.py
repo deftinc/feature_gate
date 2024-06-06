@@ -89,3 +89,11 @@ def mock_features_when_error_returned():
       return_value=load_response('get_features_when_empty')
     )
   )
+
+def mock_rate_limiting_error():
+  return Mock(
+    status_code=429,
+    json=Mock(
+      return_value=load_response('rate_limiting_error')
+    )
+  )
