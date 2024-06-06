@@ -1,9 +1,9 @@
 class NullAdapter:
   def __init__(self):
-    pass
+    self.logger = NullLogger()
 
   def logger(self):
-    ""
+    return self.logger
 
   def add(self, feature):
     pass
@@ -22,3 +22,10 @@ class NullAdapter:
 
   def disable(self, feature_key):
     pass
+
+class NullLogger:
+  def __init__(self):
+    pass
+
+  def info(self, msg, *args, **kwargs):
+    print("INFO: ", msg % tuple(args), " ".join(f"{k}={v}" for k, v in kwargs.items()))
