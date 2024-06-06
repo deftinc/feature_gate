@@ -24,7 +24,7 @@ class Client:
     return self.adapter.features()
 
   def is_enabled(self, feature):
-    self.logger.info("feature is_endabled", feature=feature)
+    self.logger.info("feature is_enabled", feature=feature)
     return self.adapter.is_enabled(feature)
 
   def enable(self, feature):
