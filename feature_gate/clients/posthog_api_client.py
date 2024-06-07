@@ -185,6 +185,9 @@ class PosthogAPIClient:
   def _check_status_ok(self, code):
     return code == 200 or code == 201
 
+  def _check_status_too_many_requests(self, code):
+    return code == 429
+
   def _map_single_response(self, method, path, response):
     ret = None
     if self._check_status_ok(response.status_code):
