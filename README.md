@@ -67,7 +67,7 @@ except FeatureNotFound as err:
   # Do what we want to do when the feature doesn't exist
 ```
 
-### PostApiClientError
+### PosthogApiClientError
 For the `PosthogAdapter` in particular it will raise error if it was unable to reach the Posthog API. These get bubbled up as `PosthogAPIClientError`.
 
 ```python
