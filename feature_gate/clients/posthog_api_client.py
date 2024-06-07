@@ -15,6 +15,9 @@ from structlog.contextvars import (
 class PosthogAPIClientError(Exception):
   pass
 
+class RateLimitError(Exception):
+  pass
+
 class PosthogAPIClient:
   def __init__(self, api_base=None, api_key=None, project_id=None):
     if api_base is None:
