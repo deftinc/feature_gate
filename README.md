@@ -67,7 +67,7 @@ except FeatureNotFound as err:
   # Do what we want to do when the feature doesn't exist
 ```
 
-### PostApiClientError
+### PosthogApiClientError
 For the `PosthogAdapter` in particular it will raise error if it was unable to reach the Posthog API. These get bubbled up as `PosthogAPIClientError`.
 
 ```python
@@ -77,6 +77,18 @@ try:
   client.features() #disable network connection
 except PosthogAPIClientError as err:
   # Handle the error -- define default behavior in outage
+```
+
+### RateLimitError
+Again, specific to the `PosthogAdapter` it will raise an error if the account is rate limited by the Posthog API. These get bubbled up as `RateLimitError`.
+
+```python
+from feature_gate.clients.posthog_api_client import RateLimitError
+
+try:
+  client.features() # receives response indicating a rate limit and retry time in seconds
+except RateLimitError as err:
+  # Handle the error -- define default behavior during rate limiting
 ```
 
 ## Testing
