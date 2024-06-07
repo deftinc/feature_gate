@@ -79,6 +79,18 @@ except PosthogAPIClientError as err:
   # Handle the error -- define default behavior in outage
 ```
 
+### RateLimitError
+Again, specific to the `PosthogAdapter` it will raise an error if the account is rate limited by the Posthog API. These get bubbled up as `RateLimitError`.
+
+```python
+from feature_gate.clients.posthog_api_client import RateLimitError
+
+try:
+  client.features() # receives response indicating a rate limit and retry time in seconds
+except RateLimitError as err:
+  # Handle the error -- define default behavior during rate limiting
+```
+
 ## Testing
 
 The Memory Adapter can be used for writing tests. This creates an ephemeral memory only implementation of the feature_gate client API. This is non-suitable for production only for tests.
