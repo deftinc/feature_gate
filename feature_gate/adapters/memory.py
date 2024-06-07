@@ -27,10 +27,12 @@ class MemoryAdapter:
         file=log_path.open("wt")
       ),
     )
-    self._logger = structlog.get_logger()
+    self.logger = structlog.get_logger()
+
+  def logger(self):
+    return self.logger
 
   def add(self, feature):
-    self._logger.info("Add feature key={feature.key}")
     if feature.key not in self._features:
       self._features.append({
         "name": feature.name,
@@ -45,7 +47,6 @@ class MemoryAdapter:
     return True
 
   def remove(self, feature_key):
-    self._logger.info("Remove feature key={feature.key}")
     for feature in self._features:
       if feature["key"] == feature_key:
         self._features.remove(feature)
@@ -54,19 +55,16 @@ class MemoryAdapter:
 
   def features(self):
     features = [feature["key"] for feature in self._features]
-    self._logger.info("Lists features {features}")
     return features
 
   def is_enabled(self, feature_key):
     for feature in self._features:
       if feature["key"] == feature_key:
         is_enabled = feature["gates"]["boolean"]["enabled"]
-        self._logger.info("Check feature key={feature.key} enabled={is_enabled}")
         return is_enabled
     raise FeatureNotFound("Feature {feature_key} not found.")
 
   def enable(self, feature_key):
-    self._logger.info("Enable feature key={feature.key}")
     for feature in self._features:
       if feature["key"] == feature_key:
         feature["gates"]["boolean"]["enabled"] = True
@@ -74,7 +72,6 @@ class MemoryAdapter:
     raise FeatureNotFound("Feature {feature_key} not found.")
 
   def disable(self, feature_key):
-    self._logger.info("Disable feature key={feature.key}")
     for feature in self._features:
       if feature["key"] == feature_key:
         feature["gates"]["boolean"]["enabled"] = False

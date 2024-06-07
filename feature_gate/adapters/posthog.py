@@ -2,9 +2,13 @@ from feature_gate.clients.posthog_api_client import PosthogAPIClient
 class PosthogAdapter:
   def __init__(self, api_key=None, project_id=None):
     self.client = PosthogAPIClient(api_key=api_key, project_id=project_id)
+    self.logger = self.client.logger
 
   def client(self):
     return self.client
+
+  def logger(self):
+    return self.logger
 
   def add(self, feature):
     if self.client.fetch_feature(feature.key) is None:

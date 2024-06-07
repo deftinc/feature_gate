@@ -4,27 +4,41 @@ class FeatureNotFound(ValueError):
 class Client:
   def __init__(self, adapter):
     self.adapter = adapter
+    self.logger = adapter.logger
 
   def adapter(self):
     return self.adapter
 
+  def logger(self):
+    return self.logger
+
   def add(self, feature):
-    return self.adapter.add(feature)
+    response = self.adapter.add(feature)
+    self.logger.info("add feature", feature=feature, response=response)
+    return response
 
   def remove(self, feature):
-    return self.adapter.remove(feature)
+    response = self.adapter.remove(feature)
+    self.logger.info("remove feature", feature=feature, response=response)
+    return response
 
   def features(self):
     return self.adapter.features()
 
   def is_enabled(self, feature):
-    return self.adapter.is_enabled(feature)
+    response = self.adapter.is_enabled(feature)
+    self.logger.info("feature is_enabled", feature=feature, response=response)
+    return response
 
   def enable(self, feature):
-    return self.adapter.enable(feature)
+    response = self.adapter.enable(feature)
+    self.logger.info("enable feature", feature=feature, response=response)
+    return response
 
   def disable(self, feature):
-    return self.adapter.disable(feature)
+    response = self.adapter.disable(feature)
+    self.logger.info("disable feature", feature=feature, response=response)
+    return response
 
   # def enable_expression(self, expression):
   #   raise NotImplementedError
