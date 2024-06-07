@@ -191,25 +191,25 @@ class PosthogAPIClient:
   def _map_single_response(self, method, path, response):
     ret = None
     if self._check_status_ok(response.status_code):
-        data = response.json()
-        self.logger.info("request successful", method=method, path=path, status_code=response.status_code, response=data)
-        ret = self._map_single_response_success(data)
+      data = response.json()
+      self.logger.info("request successful", method=method, path=path, status_code=response.status_code, response=data)
+      ret = self._map_single_response_success(data)
     else:
-        data = response.json()
-        self.logger.info("request failed", method=method, path=path, status_code=response.status_code, response=data)
-        ret = self._map_error_response(response.status_code, data)
+      data = response.json()
+      self.logger.info("request failed", method=method, path=path, status_code=response.status_code, response=data)
+      ret = self._map_error_response(response.status_code, data)
     return ret
 
   def _map_list_response(self, method, path, response):
     ret = None
     if self._check_status_ok(response.status_code):
-        data = response.json()
-        self.logger.info("request successful", method=method, path=path, status_code=response.status_code, response=data)
-        ret = self._map_list_response_success(data)
+      data = response.json()
+      self.logger.info("request successful", method=method, path=path, status_code=response.status_code, response=data)
+      ret = self._map_list_response_success(data)
     else:
-        data = response.json()
-        self.logger.info("request failed", method=method, path=path, status_code=response.status_code, response=data)
-        ret = self._map_error_response(response.status_code, data)
+      data = response.json()
+      self.logger.info("request failed", method=method, path=path, status_code=response.status_code, response=data)
+      ret = self._map_error_response(response.status_code, data)
     return ret
 
   def _map_error_response(self, code, data):
@@ -241,3 +241,7 @@ class PosthogAPIClient:
   def _log_posthog_connection_error(self, error):
     self.logger.error(f"Posthog connection error - {error}")
     raise PosthogAPIClientError(f"Posthog connection error - {error}")
+
+  def _log_posthog_rate_limit_error(self, error):
+    self.logger.error(f"Posthog rate limit error - {error}")
+    raise RateLimitError(f"Posthog rate limit error error - {error}")
