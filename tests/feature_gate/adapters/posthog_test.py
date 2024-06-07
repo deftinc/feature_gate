@@ -2,6 +2,7 @@ import pytest
 import requests
 
 from feature_gate.adapters.posthog import PosthogAdapter
+from feature_gate.clients.posthog_api_client import RateLimitError
 from feature_gate.client import Client, FeatureNotFound
 from feature_gate.feature import Feature
 from tests.fixtures.posthog_api_client.mocks import build_feature_from_mocks, mock_add_feature_funnel, mock_disable_feature_funnel, mock_enable_feature_funnel, mock_features_when_empty, mock_features_when_error_returned, mock_features_when_funnel, mock_funnel_is_disabled, mock_funnel_is_enabled, mock_remove_feature_funnel, mock_rate_limiting_error
@@ -102,8 +103,8 @@ def test_is_enabled_raises_an_error_when_rate_limited():
   with patch.object(requests, 'get', return_value=mock_rate_limiting_error()):
     try:
       resp = client.is_enabled(feature.key)
-    except FeatureNotFound as e:
-      assert str(e) == "Feature funnel_test not found"
+    except RateLimitError as e:
+      assert str(e) == "Request was throttled. Expected available in 5 seconds."
 
 def test_enable_returns_true_when_feature_exists():
   client = configured_client()

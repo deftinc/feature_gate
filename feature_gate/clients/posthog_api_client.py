@@ -194,6 +194,10 @@ class PosthogAPIClient:
       data = response.json()
       self.logger.info("request successful", method=method, path=path, status_code=response.status_code, response=data)
       ret = self._map_single_response_success(data)
+    elif self._check_status_too_many_requests(response.status_code):
+      data = response.json()
+      self.logger.info("request failed", method=method, path=path, status_code=response.status_code, response=data)
+      raise RateLimitError(f"{data['detail']}")
     else:
       data = response.json()
       self.logger.info("request failed", method=method, path=path, status_code=response.status_code, response=data)
@@ -206,6 +210,10 @@ class PosthogAPIClient:
       data = response.json()
       self.logger.info("request successful", method=method, path=path, status_code=response.status_code, response=data)
       ret = self._map_list_response_success(data)
+    elif self._check_status_too_many_requests(response.status_code):
+      data = response.json()
+      self.logger.info("request failed", method=method, path=path, status_code=response.status_code, response=data)
+      raise RateLimitError(f"{data['detail']}")
     else:
       data = response.json()
       self.logger.info("request failed", method=method, path=path, status_code=response.status_code, response=data)
