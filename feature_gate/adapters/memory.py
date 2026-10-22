@@ -33,7 +33,7 @@ class MemoryAdapter:
     return self.logger
 
   def add(self, feature):
-    if feature.key not in self._features:
+    if feature.key not in self.features():
       self._features.append({
         "name": feature.name,
         "key": feature.key,
@@ -51,7 +51,7 @@ class MemoryAdapter:
       if feature["key"] == feature_key:
         self._features.remove(feature)
         return True
-    raise FeatureNotFound("Feature {feature_key} not found.")
+    raise FeatureNotFound(f"Feature {feature_key} not found.")
 
   def features(self):
     features = [feature["key"] for feature in self._features]
@@ -62,18 +62,18 @@ class MemoryAdapter:
       if feature["key"] == feature_key:
         is_enabled = feature["gates"]["boolean"]["enabled"]
         return is_enabled
-    raise FeatureNotFound("Feature {feature_key} not found.")
+    raise FeatureNotFound(f"Feature {feature_key} not found.")
 
   def enable(self, feature_key):
     for feature in self._features:
       if feature["key"] == feature_key:
         feature["gates"]["boolean"]["enabled"] = True
         return True
-    raise FeatureNotFound("Feature {feature_key} not found.")
+    raise FeatureNotFound(f"Feature {feature_key} not found.")
 
   def disable(self, feature_key):
     for feature in self._features:
       if feature["key"] == feature_key:
         feature["gates"]["boolean"]["enabled"] = False
         return True
-    raise FeatureNotFound("Feature {feature_key} not found.")
+    raise FeatureNotFound(f"Feature {feature_key} not found.")

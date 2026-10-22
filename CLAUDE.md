@@ -1,0 +1,52 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project
+
+`feature_gate` is a small Python feature-flag library (published to PyPI) modeled on Ruby's Flipper. Dependencies are managed with Poetry; Python version is pinned in `.tool-versions` (asdf).
+
+## Commands
+
+```bash
+bin/bootstrap                 # first-time setup (brew, asdf, pipx, poetry, deps)
+bin/update                    # asdf tools + `poetry install`
+bin/ci                        # bin/update, then `poetry run pytest -vv`
+poetry run pytest -vv         # run all tests
+poetry run pytest tests/feature_gate/adapters/posthog_test.py::test_add_returns_true_when_feature_does_exist  # single test
+bin/repl                      # interactive REPL with repl.py loaded (posthog_client() helper)
+```
+
+Run pytest from the repo root: fixtures are loaded with relative paths (`./tests/fixtures/...`). Test files use the `*_test.py` naming convention.
+
+## Architecture
+
+Three layers, each delegating to the next:
+
+1. **`Client`** (`feature_gate/client.py`) — public API (`add`, `remove`, `features`, `is_enabled`, `enable`, `disable`). It forwards every call to its adapter and logs via `adapter.logger`. `FeatureNotFound` lives here and is imported by the other layers.
+2. **Adapters** (`feature_gate/adapters/`) — duck-typed backends implementing the same six methods plus a `logger` attribute. There is no base class; `tests/fixtures/null_adapter.py` is the de facto interface reference.
+   - `MemoryAdapter` — in-process list of dicts; intended for tests only.
+   - `PosthogAdapter` — wraps `PosthogAPIClient` and translates its `{"data": ...}` envelopes into plain return values.
+3. **`PosthogAPIClient`** (`feature_gate/clients/posthog_api_client.py`) — raw HTTP to the PostHog feature-flags API via `requests`. Responses are normalized to `{"data": ..., "pagination": ...}` on success or `{"errors": [...]}` on non-429 failures. HTTP 429 raises `RateLimitError`; `requests.ConnectionError` is converted to `PosthogAPIClientError`. Features are looked up by key by listing all flags (`fetch_feature`), then patched by PostHog `id`; removal is a soft delete (`PATCH deleted: true`).
+
+`Feature` (`feature_gate/feature.py`) is a plain value object (`name`, `key`, `description`). Adapters' `add` takes a `Feature`; all other methods take the feature key string. Note that `PosthogAPIClient.create_feature` sends the feature *description* as PostHog's `name` field.
+
+Large blocks of commented-out methods in `Client` and `PosthogAdapter` are a Flipper-parity roadmap (actors, groups, percentages, expressions), not dead code to remove.
+
+### Configuration and logging
+
+- `PosthogAPIClient` falls back to env vars `POSTHOG_API_KEY`, `POSTHOG_PROJECT_ID`, and `POSTHOG_API_BASE` (default `https://app.posthog.com`) when constructor args are `None`.
+- Adapters/clients call `structlog.configure(...)` globally in `__init__` and write JSON logs to files: `PosthogAPIClient` → `$PROJECT_ROOT/logs/development.log` (append), `MemoryAdapter` → `./logs/feature_gate.log` (truncate). Context is bound with `structlog.contextvars`.
+
+## Testing conventions
+
+- PostHog tests never hit the network: they `patch.object(requests, 'get'|'post'|'patch', return_value=...)` using the `Mock` response builders in `tests/fixtures/posthog_api_client/mocks.py`, which load JSON from `tests/fixtures/posthog_api_client/*.json`. Add a new JSON fixture + `mock_*` builder for new response shapes.
+- `Client` tests use `NullAdapter` to isolate the client from any backend.
+
+## Code style
+
+Two-space indentation throughout (not PEP 8's four). Classes expose attributes alongside same-named accessor methods (e.g. `self.logger` and `def logger`); the instance attribute shadows the method, so access them as attributes.
+
+## Releasing
+
+Bump the version in both `VERSION` and `pyproject.toml` (they must match), merge to `main`, then run `bin/publish`, which tags `vX.Y.Z` and pushes the tag. The tag push triggers `.github/workflows/python-publish.yml`, which builds and publishes to PyPI.
