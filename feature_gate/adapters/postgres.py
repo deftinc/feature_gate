@@ -1,22 +1,26 @@
 import structlog
 from feature_gate.client import FeatureNotFound
-from feature_gate.migrate import database_url_from_env
+from feature_gate.migrate import database_url_from_env, table_prefix_from_env, validate_table_prefix
 
 from structlog.contextvars import bind_contextvars
 
 class PostgresAdapter:
-  """Stores features in the feature_gate_features table.
+  """Stores features in the <table_prefix>features table.
 
-  Run `feature-gate-migrate` against the database before using this adapter.
+  Run `feature-gate-migrate` against the database, with the same table prefix,
+  before using this adapter. `table_prefix` falls back to
+  $FEATURE_GATE_TABLE_PREFIX, then "feature_gate_".
   Pass either a `database_url` (falls back to $FEATURE_GATE_DATABASE_URL, then
   $DATABASE_URL) or an existing psycopg `connection`. With a non-autocommit
   connection that is already inside a transaction, writes join that transaction
   and are committed when the caller commits.
   """
-  def __init__(self, database_url=None, connection=None):
+  def __init__(self, database_url=None, connection=None, table_prefix=None):
     import psycopg
 
     self._psycopg = psycopg
+    self.table_prefix = validate_table_prefix(table_prefix or table_prefix_from_env())
+    self._table = f"{self.table_prefix}features"
     # Only fall back to the env when no connection is given, so a closed
     # caller-owned connection raises instead of reconnecting elsewhere.
     self.database_url = database_url or (database_url_from_env() if connection is None else None)
@@ -29,13 +33,16 @@ class PostgresAdapter:
   def connection(self):
     return self.connection
 
+  def table_prefix(self):
+    return self.table_prefix
+
   def logger(self):
     return self.logger
 
   def add(self, feature):
     self._query(
-      """
-      INSERT INTO feature_gate_features (key, name, description)
+      f"""
+      INSERT INTO {self._table} (key, name, description)
       VALUES (%s, %s, %s)
       ON CONFLICT (key) DO NOTHING
       """,
@@ -45,19 +52,19 @@ class PostgresAdapter:
 
   def remove(self, feature_key):
     rows = self._query(
-      "DELETE FROM feature_gate_features WHERE key = %s RETURNING id",
+      f"DELETE FROM {self._table} WHERE key = %s RETURNING id",
       (feature_key,),
     )
     self._raise_if_missing(rows, feature_key)
     return True
 
   def features(self):
-    rows = self._query("SELECT key FROM feature_gate_features ORDER BY id")
+    rows = self._query(f"SELECT key FROM {self._table} ORDER BY id")
     return [row[0] for row in rows]
 
   def is_enabled(self, feature_key):
     rows = self._query(
-      "SELECT enabled FROM feature_gate_features WHERE key = %s",
+      f"SELECT enabled FROM {self._table} WHERE key = %s",
       (feature_key,),
     )
     self._raise_if_missing(rows, feature_key)
@@ -73,8 +80,8 @@ class PostgresAdapter:
 
   def _set_enabled(self, feature_key, enabled):
     rows = self._query(
-      """
-      UPDATE feature_gate_features
+      f"""
+      UPDATE {self._table}
       SET enabled = %s, updated_at = now()
       WHERE key = %s
       RETURNING id

@@ -4,6 +4,7 @@ import pytest
 from feature_gate.client import Client, FeatureNotFound
 from feature_gate.adapters.postgres import PostgresAdapter
 from feature_gate.feature import Feature
+from feature_gate.migrate import main
 
 @pytest.fixture
 def client(migrated_postgres_url):
@@ -123,6 +124,35 @@ def test_writes_join_the_callers_open_transaction(migrated_postgres_url):
     adapter.add(build_feature())
     connection.rollback()
     assert adapter.features() == []
+
+def test_table_prefix_defaults_to_feature_gate(client):
+  assert client.adapter.table_prefix == "feature_gate_"
+
+def test_custom_table_prefix_uses_its_own_table(migrated_postgres_url):
+  main(["--database-url", migrated_postgres_url, "--table-prefix", "custom_ff_"])
+  custom = PostgresAdapter(database_url=migrated_postgres_url, table_prefix="custom_ff_")
+  default = PostgresAdapter(database_url=migrated_postgres_url)
+  custom.add(build_feature("custom_only"))
+  custom.enable("custom_only")
+  assert custom.features() == ["custom_only"]
+  assert custom.is_enabled("custom_only")
+  assert default.features() == []
+  with psycopg.connect(migrated_postgres_url) as connection:
+    count = connection.execute("SELECT count(*) FROM custom_ff_features").fetchone()[0]
+  assert count == 1
+  custom.connection.close()
+  default.connection.close()
+
+def test_table_prefix_falls_back_to_env(migrated_postgres_url, monkeypatch):
+  monkeypatch.setenv("FEATURE_GATE_TABLE_PREFIX", "custom_ff_")
+  adapter = PostgresAdapter(database_url=migrated_postgres_url)
+  assert adapter.table_prefix == "custom_ff_"
+  adapter.connection.close()
+
+@pytest.mark.parametrize("table_prefix", ["Feature_", "1ff_", "ff; DROP TABLE x; --", "a" * 47])
+def test_rejects_unsafe_table_prefix(table_prefix):
+  with pytest.raises(ValueError):
+    PostgresAdapter(database_url="postgresql://unused", table_prefix=table_prefix)
 
 def test_requires_a_database_url_or_connection(monkeypatch):
   monkeypatch.delenv("FEATURE_GATE_DATABASE_URL", raising=False)

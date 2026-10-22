@@ -1,7 +1,10 @@
+-- feature_gate.migrate replaces the prefix placeholder in object names with
+-- the configured table prefix.
+
 -- RFC 9562 UUIDv7. PostgreSQL 18 ships uuidv7(), but this supports older
 -- servers. Like PostgreSQL 18's, it fills the 12-bit rand_a field with
 -- sub-millisecond clock precision so ids sort in creation order.
-CREATE FUNCTION feature_gate_uuidv7() RETURNS uuid
+CREATE FUNCTION {prefix}uuidv7() RETURNS uuid
 LANGUAGE plpgsql VOLATILE AS $$
 DECLARE
   epoch_ms numeric := extract(epoch FROM clock_timestamp()) * 1000;
@@ -17,8 +20,8 @@ BEGIN
 END
 $$;
 
-CREATE TABLE feature_gate_features (
-  id uuid PRIMARY KEY DEFAULT feature_gate_uuidv7(),
+CREATE TABLE {prefix}features (
+  id uuid PRIMARY KEY DEFAULT {prefix}uuidv7(),
   key text NOT NULL UNIQUE,
   name text,
   description text,

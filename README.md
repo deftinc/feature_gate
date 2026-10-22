@@ -26,18 +26,24 @@ Point it at your database:
 
 ```bash
 export FEATURE_GATE_DATABASE_URL="postgresql://user:pass@localhost:5432/myapp" # Falls back to DATABASE_URL
+export FEATURE_GATE_TABLE_PREFIX="feature_gate_"                               # Optional, this is the default
 ```
+
+Every table and function feature_gate creates starts with the table prefix, which defaults to `feature_gate_`. Change it if those names clash with something in your database. The prefix may only contain lowercase letters, digits and underscores, can't start with a digit, and can be at most 46 characters. The migrations and the adapter must use the same prefix.
 
 Create the tables by running the migrations against that database. Do this once when you set it up, and again after you upgrade `feature_gate`:
 
 ```bash
 feature-gate-migrate                                  # uses FEATURE_GATE_DATABASE_URL, then DATABASE_URL
 feature-gate-migrate --database-url postgresql://...  # or pass it explicitly
+feature-gate-migrate --table-prefix flags_            # uses FEATURE_GATE_TABLE_PREFIX, then feature_gate_
 ```
 
-The migrations create `feature_gate_features` and `feature_gate_schema_migrations`, which records the migrations that have been applied. Running the command again only applies new migrations. A PostgreSQL advisory lock stops two deploys from migrating at the same time. To run migrations from Python, for example inside your own migration tool, use `feature_gate.migrate.migrate(connection)` with an autocommit psycopg connection.
+The migrations create the tables and function described under [Schema](#schema). Running the command again only applies new migrations. Each prefix has its own migration history, so two prefixes can live side by side in one database. A PostgreSQL advisory lock stops two deploys from migrating at the same time. To run migrations from Python, for example inside your own migration tool, use `feature_gate.migrate.migrate(connection, table_prefix="feature_gate_")` with an autocommit psycopg connection.
 
 #### Schema
+
+The names below use the default `feature_gate_` prefix; with a custom prefix, swap it in, e.g. `flags_features`.
 
 `feature_gate_features` has one row for each feature:
 
@@ -55,7 +61,7 @@ The migrations create `feature_gate_features` and `feature_gate_schema_migration
 
 | Column       | Type          | Notes                                                        |
 |--------------|---------------|--------------------------------------------------------------|
-| `version`    | `text`        | Primary key. The migration's file name without `.sql`, e.g. `0001_create_feature_gate_features`. |
+| `version`    | `text`        | Primary key. The migration's file name without `.sql`, e.g. `0001_create_features`. |
 | `applied_at` | `timestamptz` | `NOT NULL`, defaults to `now()`.                             |
 
 The migrations also create the function `feature_gate_uuidv7()`. PostgreSQL 18 has a built-in `uuidv7()`, but this function works on PostgreSQL 13 and later. Like the built-in, it fills the 12 bits after the millisecond timestamp with sub-millisecond clock precision, so IDs created one after another sort in that order.
@@ -68,6 +74,7 @@ from feature_gate.adapters import PostgresAdapter
 adapter = PostgresAdapter()                                 # reads the env vars above
 adapter = PostgresAdapter(database_url="postgresql://...")  # or pass a URL
 adapter = PostgresAdapter(connection=existing_psycopg_conn) # or reuse a psycopg 3 connection
+adapter = PostgresAdapter(table_prefix="flags_")            # match the prefix you migrated with
 ```
 
 When you pass in a connection that is already inside a transaction, the adapter's writes become part of that transaction and are committed only when you commit.
@@ -172,7 +179,7 @@ bin/bootstrap # first-time setup
 bin/ci        # install dependencies and run the tests
 ```
 
-The PostgreSQL tests are skipped unless `FEATURE_GATE_TEST_DATABASE_URL` points at a database they're allowed to modify. They drop and recreate the `feature_gate_*` tables.
+The PostgreSQL tests are skipped unless `FEATURE_GATE_TEST_DATABASE_URL` points at a database they're allowed to modify. They drop and recreate the tables and functions for the `feature_gate_` and `custom_ff_` prefixes.
 
 ```bash
 createdb feature_gate_test
