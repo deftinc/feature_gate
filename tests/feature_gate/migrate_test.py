@@ -1,4 +1,3 @@
-import uuid
 import psycopg
 import pytest
 from feature_gate.migrate import MigrationError, available_migrations, main, migrate
@@ -21,16 +20,6 @@ def test_migrate_creates_tables(postgres_url):
     applied = migrate(connection)
   assert applied == [version for version, _sql in available_migrations()]
   assert table_names(postgres_url) == {"feature_gate_features", "feature_gate_schema_migrations"}
-
-def test_uuidv7_function_sets_version_variant_and_timestamp(postgres_url):
-  with psycopg.connect(postgres_url, autocommit=True) as connection:
-    migrate(connection)
-    id, now_ms = connection.execute(
-      "SELECT feature_gate_uuidv7(), (extract(epoch FROM clock_timestamp()) * 1000)::bigint"
-    ).fetchone()
-  assert id.version == 7
-  assert id.variant == uuid.RFC_4122
-  assert abs((id.int >> 80) - now_ms) < 1000
 
 def test_migrate_is_a_noop_when_up_to_date(postgres_url):
   with psycopg.connect(postgres_url, autocommit=True) as connection:

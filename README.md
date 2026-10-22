@@ -16,7 +16,7 @@ export POSTHOG_API_BASE="https://us.posthog.com" # Optional, defaults to US Clou
 
 ### PostgresAdapter
 
-Install the optional PostgreSQL dependency (psycopg 3):
+Requires PostgreSQL 18 or later, which added the built-in `uuidv7()` used for feature IDs. Install the optional PostgreSQL dependency (psycopg 3):
 
 ```bash
 pip install "feature_gate[postgres]"
@@ -43,7 +43,7 @@ The migrations create `feature_gate_features` and `feature_gate_schema_migration
 
 | Column        | Type          | Notes                                                                 |
 |---------------|---------------|-----------------------------------------------------------------------|
-| `id`          | `uuid`        | Primary key, a UUIDv7 that defaults to `feature_gate_uuidv7()`. UUIDv7s sort by creation time, so `features()` orders by `id` to return features in the order they were added. |
+| `id`          | `uuid`        | Primary key, a UUIDv7 that defaults to PostgreSQL's built-in `uuidv7()`. UUIDv7s sort by creation time, so `features()` orders by `id` to return features in the order they were added. |
 | `key`         | `text`        | `NOT NULL`, `UNIQUE`. The key you pass to `is_enabled`, `enable`, `disable` and `remove`. |
 | `name`        | `text`        | `Feature.name`.                                                        |
 | `description` | `text`        | `Feature.description`.                                                 |
@@ -57,8 +57,6 @@ The migrations create `feature_gate_features` and `feature_gate_schema_migration
 |--------------|---------------|--------------------------------------------------------------|
 | `version`    | `text`        | Primary key. The migration's file name without `.sql`, e.g. `0001_create_feature_gate_features`. |
 | `applied_at` | `timestamptz` | `NOT NULL`, defaults to `now()`.                             |
-
-The migrations also create the function `feature_gate_uuidv7()`. PostgreSQL 18 has a built-in `uuidv7()`, but this function works on PostgreSQL 13 and later. Like the built-in, it fills the 12 bits after the millisecond timestamp with sub-millisecond clock precision, so IDs created one after another sort in that order.
 
 `remove` deletes the feature's row; nothing is soft-deleted. Change these tables only by adding migrations, never by hand, because `feature-gate-migrate` assumes they match what its migrations created.
 
