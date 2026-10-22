@@ -1,6 +1,6 @@
 [project]
 name = "feature_gate"
-version = "0.0.8"
+version = "0.0.9"
 description = "An extensible feature flagging library for Python"
 authors = [{ name = "Patrick Wiseman", email = "patrick@deft.services" }]
 maintainers = [{ name = "Patrick Wiseman", email = "patrick@deft.services" }]
@@ -23,6 +23,14 @@ dependencies = [
   "requests>=2.34.2",
 ]
 
+[project.optional-dependencies]
+postgres = [
+  "psycopg[binary]>=3.2",
+]
+
+[project.scripts]
+feature-gate-migrate = "feature_gate.migrate:main"
+
 [project.urls]
 Homepage = "https://github.com/deftinc/feature_gate"
 Repository = "https://github.com/deftinc/feature_gate"
@@ -31,6 +39,7 @@ Repository = "https://github.com/deftinc/feature_gate"
 dev = [
   "pytest>=9.1.1",
   "pytest-mock>=3.17.0",
+  "psycopg[binary]>=3.2",
 ]
 
 [tool.uv]
