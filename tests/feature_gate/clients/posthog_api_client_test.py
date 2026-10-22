@@ -18,7 +18,7 @@ def test_project_id_returns_project_id_instantiated():
 
 def test_api_base_uses_default():
   client = configured_client()
-  assert client.api_base == "https://app.posthog.com"
+  assert client.api_base == "https://us.posthog.com"
 
 def test_list_features_returns_a_list_of_features():
   with patch.object(requests, 'get', return_value=mock_features_when_funnel()):

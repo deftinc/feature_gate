@@ -9,7 +9,10 @@ Featuregate is a simple feature flag API similar to [Flipper](https://github.com
 ```bash
 export POSTHOG_API_KEY="someapikey"
 export POSTHOG_PROJECT_ID="someprojectid"
+export POSTHOG_API_BASE="https://us.posthog.com" # Optional, defaults to US Cloud
 ```
+
+`POSTHOG_API_KEY` must be a personal API key with the `feature_flag:read` and `feature_flag:write` scopes. EU Cloud users should set `POSTHOG_API_BASE="https://eu.posthog.com"`; self-hosted users should use their own domain.
 
 ## Usage
 
@@ -104,11 +107,18 @@ client = Client(MemoryAdapter())
 
 ## Developing this library
 
+Tool versions (Python and [uv](https://docs.astral.sh/uv/)) are pinned in `.tool-versions` and installed with [asdf](https://asdf-vm.com/).
+
+```bash
+bin/bootstrap # first-time setup
+bin/ci        # install dependencies and run the tests
+```
+
 ### Hot-reload the REPL
 
 Hot-reload the client in the repl for development:
 
 ```
-$ repl
+$ bin/repl
 >>> exec(open('reload.py').read())
 ```

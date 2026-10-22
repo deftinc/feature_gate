@@ -4,16 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-`feature_gate` is a small Python feature-flag library (published to PyPI) modeled on Ruby's Flipper. Dependencies are managed with Poetry; Python version is pinned in `.tool-versions` (asdf).
+`feature_gate` is a small Python feature-flag library (published to PyPI) modeled on Ruby's Flipper. Dependencies are managed with uv (`pyproject.toml` + `uv.lock`, built with hatchling); Python and uv versions are pinned in `.tool-versions` (asdf). Supports Python >= 3.10.
 
 ## Commands
 
 ```bash
-bin/bootstrap                 # first-time setup (brew, asdf, pipx, poetry, deps)
-bin/update                    # asdf tools + `poetry install`
-bin/ci                        # bin/update, then `poetry run pytest -vv`
-poetry run pytest -vv         # run all tests
-poetry run pytest tests/feature_gate/adapters/posthog_test.py::test_add_returns_true_when_feature_does_exist  # single test
+bin/bootstrap                 # first-time setup (brew, asdf, then bin/update)
+bin/update                    # asdf plugins/tools + `uv sync --locked`
+bin/ci                        # bin/update, then `uv run pytest -vv`
+uv run pytest -vv             # run all tests
+uv run --isolated --python 3.10 pytest -vv  # run against the oldest supported Python
+uv run pytest tests/feature_gate/adapters/posthog_test.py::test_add_returns_true_when_feature_does_exist  # single test
 bin/repl                      # interactive REPL with repl.py loaded (posthog_client() helper)
 ```
 
@@ -35,7 +36,7 @@ Large blocks of commented-out methods in `Client` and `PosthogAdapter` are a Fli
 
 ### Configuration and logging
 
-- `PosthogAPIClient` falls back to env vars `POSTHOG_API_KEY`, `POSTHOG_PROJECT_ID`, and `POSTHOG_API_BASE` (default `https://app.posthog.com`) when constructor args are `None`.
+- `PosthogAPIClient` falls back to env vars `POSTHOG_API_KEY`, `POSTHOG_PROJECT_ID`, and `POSTHOG_API_BASE` (default `https://us.posthog.com`; EU Cloud is `https://eu.posthog.com`) when constructor args are `None`.
 - Adapters/clients call `structlog.configure(...)` globally in `__init__` and write JSON logs to files: `PosthogAPIClient` → `$PROJECT_ROOT/logs/development.log` (append), `MemoryAdapter` → `./logs/feature_gate.log` (truncate). Context is bound with `structlog.contextvars`.
 
 ## Testing conventions
@@ -49,4 +50,4 @@ Two-space indentation throughout (not PEP 8's four). Classes expose attributes a
 
 ## Releasing
 
-Bump the version in both `VERSION` and `pyproject.toml` (they must match), merge to `main`, then run `bin/publish`, which tags `vX.Y.Z` and pushes the tag. The tag push triggers `.github/workflows/python-publish.yml`, which builds and publishes to PyPI.
+Bump the version in both `VERSION` and `pyproject.toml` (they must match), merge to `main`, then run `bin/publish`, which tags `vX.Y.Z` and pushes the tag. The tag push triggers `.github/workflows/python-publish.yml`, which runs the tests, then `uv build` and `uv publish` to PyPI using the `PYPI_API_TOKEN` secret.

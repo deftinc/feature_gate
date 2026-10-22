@@ -1,25 +1,47 @@
-
-[tool.poetry]
+[project]
 name = "feature_gate"
-version = "0.0.7"
+version = "0.0.8"
 description = "An extensible feature flagging library for Python"
-authors = ["Patrick Wiseman <patrick@deft.services>"]
-maintainers = ["Patrick Wiseman <patrick@deft.services>"]
+authors = [{ name = "Patrick Wiseman", email = "patrick@deft.services" }]
+maintainers = [{ name = "Patrick Wiseman", email = "patrick@deft.services" }]
 license = "MIT"
+license-files = ["LICENSE"]
 readme = "README.md"
-homepage = "https://github.com/deftinc/feature_gate"
-repository = "https://github.com/deftinc/feature_gate"
 keywords = ["feature flags", "feature gate"]
+requires-python = ">=3.10"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3.15",
+]
+dependencies = [
+  "structlog>=26.1.0",
+  "requests>=2.34.2",
+]
 
-[tool.poetry.dependencies]
-python = ">= 3.10"
-structlog = "^24.1.0"
-requests = "^2.31.0"
+[project.urls]
+Homepage = "https://github.com/deftinc/feature_gate"
+Repository = "https://github.com/deftinc/feature_gate"
 
-[tool.poetry.group.test.dependencies]
-pytest = "^8.0.0"
-pytest-mock = "^3.12.0"
+[dependency-groups]
+dev = [
+  "pytest>=9.1.1",
+  "pytest-mock>=3.17.0",
+]
+
+[tool.uv]
+required-version = ">=0.13.5"
+
+[tool.hatch.build.targets.sdist]
+include = ["feature_gate", "README.md", "LICENSE"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["feature_gate"]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
