@@ -14,6 +14,64 @@ export POSTHOG_API_BASE="https://us.posthog.com" # Optional, defaults to US Clou
 
 `POSTHOG_API_KEY` must be a personal API key with the `feature_flag:read` and `feature_flag:write` scopes. EU Cloud users should set `POSTHOG_API_BASE="https://eu.posthog.com"`; self-hosted users should use their own domain.
 
+### PostgresAdapter
+
+Install the optional PostgreSQL dependency (psycopg 3):
+
+```bash
+pip install "feature_gate[postgres]"
+```
+
+Point it at your database:
+
+```bash
+export FEATURE_GATE_DATABASE_URL="postgresql://user:pass@localhost:5432/myapp" # Falls back to DATABASE_URL
+```
+
+Create the tables by running the migrations against that database. Do this once when you set it up, and again after you upgrade `feature_gate`:
+
+```bash
+feature-gate-migrate                                  # uses FEATURE_GATE_DATABASE_URL, then DATABASE_URL
+feature-gate-migrate --database-url postgresql://...  # or pass it explicitly
+```
+
+The migrations create `feature_gate_features` and `feature_gate_schema_migrations`, which records the migrations that have been applied. Running the command again only applies new migrations. A PostgreSQL advisory lock stops two deploys from migrating at the same time. To run migrations from Python, for example inside your own migration tool, use `feature_gate.migrate.migrate(connection)` with an autocommit psycopg connection.
+
+#### Schema
+
+`feature_gate_features` has one row for each feature:
+
+| Column        | Type          | Notes                                                                 |
+|---------------|---------------|-----------------------------------------------------------------------|
+| `id`          | `uuid`        | Primary key, a UUIDv7 that defaults to `feature_gate_uuidv7()`. UUIDv7s sort by creation time, so `features()` orders by `id` to return features in the order they were added. |
+| `key`         | `text`        | `NOT NULL`, `UNIQUE`. The key you pass to `is_enabled`, `enable`, `disable` and `remove`. |
+| `name`        | `text`        | `Feature.name`.                                                        |
+| `description` | `text`        | `Feature.description`.                                                 |
+| `enabled`     | `boolean`     | `NOT NULL`, defaults to `false`. A new feature starts out disabled.    |
+| `created_at`  | `timestamptz` | `NOT NULL`, defaults to `now()`.                                       |
+| `updated_at`  | `timestamptz` | `NOT NULL`, defaults to `now()`. Updated by `enable` and `disable`.    |
+
+`feature_gate_schema_migrations` has one row for each migration that has been applied:
+
+| Column       | Type          | Notes                                                        |
+|--------------|---------------|--------------------------------------------------------------|
+| `version`    | `text`        | Primary key. The migration's file name without `.sql`, e.g. `0001_create_feature_gate_features`. |
+| `applied_at` | `timestamptz` | `NOT NULL`, defaults to `now()`.                             |
+
+The migrations also create the function `feature_gate_uuidv7()`. PostgreSQL 18 has a built-in `uuidv7()`, but this function works on PostgreSQL 13 and later. Like the built-in, it fills the 12 bits after the millisecond timestamp with sub-millisecond clock precision, so IDs created one after another sort in that order.
+
+`remove` deletes the feature's row; nothing is soft-deleted. Change these tables only by adding migrations, never by hand, because `feature-gate-migrate` assumes they match what its migrations created.
+
+```python
+from feature_gate.adapters import PostgresAdapter
+
+adapter = PostgresAdapter()                                 # reads the env vars above
+adapter = PostgresAdapter(database_url="postgresql://...")  # or pass a URL
+adapter = PostgresAdapter(connection=existing_psycopg_conn) # or reuse a psycopg 3 connection
+```
+
+When you pass in a connection that is already inside a transaction, the adapter's writes become part of that transaction and are committed only when you commit.
+
 ## Usage
 
 ```python
@@ -112,6 +170,13 @@ Tool versions (Python and [uv](https://docs.astral.sh/uv/)) are pinned in `.tool
 ```bash
 bin/bootstrap # first-time setup
 bin/ci        # install dependencies and run the tests
+```
+
+The PostgreSQL tests are skipped unless `FEATURE_GATE_TEST_DATABASE_URL` points at a database they're allowed to modify. They drop and recreate the `feature_gate_*` tables.
+
+```bash
+createdb feature_gate_test
+FEATURE_GATE_TEST_DATABASE_URL=postgresql://localhost/feature_gate_test uv run pytest -vv
 ```
 
 ### Hot-reload the REPL

@@ -23,6 +23,14 @@ dependencies = [
   "requests>=2.34.2",
 ]
 
+[project.optional-dependencies]
+postgres = [
+  "psycopg[binary]>=3.2",
+]
+
+[project.scripts]
+feature-gate-migrate = "feature_gate.migrate:main"
+
 [project.urls]
 Homepage = "https://github.com/deftinc/feature_gate"
 Repository = "https://github.com/deftinc/feature_gate"
@@ -31,6 +39,7 @@ Repository = "https://github.com/deftinc/feature_gate"
 dev = [
   "pytest>=9.1.1",
   "pytest-mock>=3.17.0",
+  "psycopg[binary]>=3.2",
 ]
 
 [tool.uv]

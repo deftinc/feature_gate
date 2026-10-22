@@ -14,6 +14,7 @@ bin/update                    # asdf plugins/tools + `uv sync --locked`
 bin/ci                        # bin/update, then `uv run pytest -vv`
 uv run pytest -vv             # run all tests
 uv run --isolated --python 3.10 pytest -vv  # run against the oldest supported Python
+FEATURE_GATE_TEST_DATABASE_URL=postgresql://localhost/feature_gate_test uv run pytest -vv  # include PostgreSQL tests
 uv run pytest tests/feature_gate/adapters/posthog_test.py::test_add_returns_true_when_feature_does_exist  # single test
 bin/repl                      # interactive REPL with repl.py loaded (posthog_client() helper)
 ```
@@ -27,8 +28,11 @@ Three layers, each delegating to the next:
 1. **`Client`** (`feature_gate/client.py`) — public API (`add`, `remove`, `features`, `is_enabled`, `enable`, `disable`). It forwards every call to its adapter and logs via `adapter.logger`. `FeatureNotFound` lives here and is imported by the other layers.
 2. **Adapters** (`feature_gate/adapters/`) — duck-typed backends implementing the same six methods plus a `logger` attribute. There is no base class; `tests/fixtures/null_adapter.py` is the de facto interface reference.
    - `MemoryAdapter` — in-process list of dicts; intended for tests only.
+   - `PostgresAdapter` — psycopg 3 (optional extra `feature_gate[postgres]`, imported lazily so the other adapters work without it). Stores flags in a single `feature_gate_features` table (`key` unique, `enabled` boolean; `id` is a UUIDv7 from the migration-defined `feature_gate_uuidv7()`, which supports PostgreSQL < 18, and `features()` is ordered by `id`). Each call runs in `connection.transaction()`, so a caller-supplied connection that's mid-transaction gets a savepoint, not a commit. Raises `FeatureNotFound` like `MemoryAdapter`.
    - `PosthogAdapter` — wraps `PosthogAPIClient` and translates its `{"data": ...}` envelopes into plain return values.
 3. **`PosthogAPIClient`** (`feature_gate/clients/posthog_api_client.py`) — raw HTTP to the PostHog feature-flags API via `requests`. Responses are normalized to `{"data": ..., "pagination": ...}` on success or `{"errors": [...]}` on non-429 failures. HTTP 429 raises `RateLimitError`; `requests.ConnectionError` is converted to `PosthogAPIClientError`. Features are looked up by key by listing all flags (`fetch_feature`), then patched by PostHog `id`; removal is a soft delete (`PATCH deleted: true`).
+
+PostgreSQL schema changes are numbered SQL files in `feature_gate/migrations/` (shipped in the wheel, loaded with `importlib.resources`), applied by `feature_gate/migrate.py`, which is exposed as the `feature-gate-migrate` console script. Add a new `NNNN_*.sql` file for each schema change and never edit one that has shipped. Applied versions are tracked in `feature_gate_schema_migrations`.
 
 `Feature` (`feature_gate/feature.py`) is a plain value object (`name`, `key`, `description`). Adapters' `add` takes a `Feature`; all other methods take the feature key string. Note that `PosthogAPIClient.create_feature` sends the feature *description* as PostHog's `name` field.
 
@@ -42,6 +46,7 @@ Large blocks of commented-out methods in `Client` and `PosthogAdapter` are a Fli
 ## Testing conventions
 
 - PostHog tests never hit the network: they `patch.object(requests, 'get'|'post'|'patch', return_value=...)` using the `Mock` response builders in `tests/fixtures/posthog_api_client/mocks.py`, which load JSON from `tests/fixtures/posthog_api_client/*.json`. Add a new JSON fixture + `mock_*` builder for new response shapes.
+- PostgreSQL tests (`postgres_test.py`, `migrate_test.py`) use the `postgres_url` / `migrated_postgres_url` fixtures in `tests/conftest.py`, which skip unless `FEATURE_GATE_TEST_DATABASE_URL` is set and drop the `feature_gate_*` tables before each test. The release workflow runs them against a `postgres:16` service container.
 - `Client` tests use `NullAdapter` to isolate the client from any backend.
 
 ## Code style

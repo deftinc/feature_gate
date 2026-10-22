@@ -6,6 +6,19 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: feature_gate_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.3.2
@@ -13,6 +26,8 @@ jobs:
           version-file: ".tool-versions"
       - name: Run tests
         run: uv run --locked pytest -vv
+        env:
+          FEATURE_GATE_TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/feature_gate_test
       - name: Build
         run: uv build
       - name: Publish to PyPI
