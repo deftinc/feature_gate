@@ -4,4 +4,4 @@ cd "$(dirname "$0")/.."
 source bin/functions.sh
 
 ./bin/update
-poetry run pytest -vv
+uv run pytest -vv

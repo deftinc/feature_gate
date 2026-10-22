@@ -76,16 +76,9 @@ brew_bundle_install() {
 }
 
 asdf_bootstrap() {
-  [ ! -d "$HOMEBREW_CELLAR/asdf" ] || {
-    brew uninstall asdf
-    describe "Uninstall asdf from homebrew"
-  }
-  [ -d "$HOME/.asdf" ] || {
-    describe "Install asdf via git"
-    git clone https://github.com/asdf-vm/asdf.git ~/.asdf
-    . $HOME/.asdf/asdf.sh
-    echo '. $HOME/.asdf/asdf.sh' >> $HOME/.bash_profile
-    asdf update
+  command -v asdf > /dev/null || {
+    describe "Install asdf via Homebrew"
+    brew install asdf
   }
 }
 
@@ -93,6 +86,7 @@ asdf_add_plugins() {
   if [ -f .tool-versions ]; then
     describe "Add asdf language plugins"
     asdf plugin add python || true
+    asdf plugin add uv || true
   fi
 }
 
@@ -106,41 +100,11 @@ asdf_install_tools() {
 asdf_update_plugins() {
   if [ -f .tool-versions ]; then
     describe "Update asdf language plugins"
-    asdf plugin-update --all
+    asdf plugin update --all
   fi
-}
-
-python_update_pip() {
-  describe "Update pip"
-  pip3 install --upgrade pip
-}
-
-python_install_pipx() {
-  describe "Install pipx"
-  pip3 install pipx
-}
-
-python_install_poetry() {
-  describe "Install poetry"
-  pipx install poetry
-}
-
-python_add_home_local_bin_to_path_in_bash_profile() {
-  local bin_local_path="$HOME/.local/bin"
-  if [[ ":$PATH:" == *":$bin_local_path:"* ]]; then
-    echo "$bin_local_path is already in the PATH variable."
-  else
-    echo "Adding $bin_local_path to .bash_profile you'll need to run 'source ~/.bash_profile'"
-    echo 'export PATH="$PATH:${HOME}/.local/bin" # Python' >> $HOME/.bash_profile
-  fi
-}
-
-python_update_poetry() {
-  describe "Update poetry"
-  pipx upgrade poetry
 }
 
 python_install_dependencies() {
   describe "Install python dependencies"
-  poetry install
+  uv sync --locked
 }

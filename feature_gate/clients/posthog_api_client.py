@@ -21,7 +21,7 @@ class RateLimitError(Exception):
 class PosthogAPIClient:
   def __init__(self, api_base=None, api_key=None, project_id=None):
     if api_base is None:
-      self.api_base = os.environ.get("POSTHOG_API_BASE", "https://app.posthog.com")
+      self.api_base = os.environ.get("POSTHOG_API_BASE", "https://us.posthog.com")
     else:
       self.api_base = api_base
 
