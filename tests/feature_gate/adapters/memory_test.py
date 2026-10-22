@@ -66,3 +66,15 @@ def test_remove_feature_not_found():
   client = configured_client()
   with pytest.raises(FeatureNotFound):
     client.remove("test_feature")
+
+def test_add_feature_twice_does_not_duplicate():
+  client = configured_client()
+  feature = build_feature()
+  assert client.add(feature)
+  assert client.add(feature)
+  assert client.features() == ["test_feature"]
+
+def test_feature_not_found_message_includes_key():
+  client = configured_client()
+  with pytest.raises(FeatureNotFound, match="Feature test_feature not found."):
+    client.is_enabled("test_feature")

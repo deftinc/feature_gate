@@ -1,7 +1,7 @@
 importlib.reload(importlib)
 importlib.reload(feature_gate.client)
 importlib.reload(feature_gate.clients)
-importlib.reload(feature_gate.clients.posthog)
+importlib.reload(feature_gate.clients.posthog_api_client)
 importlib.reload(feature_gate.feature)
 importlib.reload(feature_gate.adapters)
 importlib.reload(feature_gate.adapters.posthog)
