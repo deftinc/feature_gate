@@ -46,7 +46,7 @@ Large blocks of commented-out methods in `Client` and `PosthogAdapter` are a Fli
 ## Testing conventions
 
 - PostHog tests never hit the network: they `patch.object(requests, 'get'|'post'|'patch', return_value=...)` using the `Mock` response builders in `tests/fixtures/posthog_api_client/mocks.py`, which load JSON from `tests/fixtures/posthog_api_client/*.json`. Add a new JSON fixture + `mock_*` builder for new response shapes.
-- PostgreSQL tests (`postgres_test.py`, `migrate_test.py`) use the `postgres_url` / `migrated_postgres_url` fixtures in `tests/conftest.py`, which skip unless `FEATURE_GATE_TEST_DATABASE_URL` is set and drop the tables and functions for each prefix in `TEST_TABLE_PREFIXES` (`feature_gate_`, `custom_ff_`) before each test. The release workflow runs them against a `postgres:16` service container.
+- PostgreSQL tests (`postgres_test.py`, `migrate_test.py`) use the `postgres_url` / `migrated_postgres_url` fixtures in `tests/conftest.py`, which skip unless `FEATURE_GATE_TEST_DATABASE_URL` is set and drop the tables and functions for each prefix in `TEST_TABLE_PREFIXES` (`feature_gate_`, `custom_ff_`) before each test. `.github/workflows/ci.yml` runs the suite on every pull request across Python 3.10/3.15 × PostgreSQL 16/18 service containers; the release workflow also runs them against `postgres:16` before publishing.
 - `Client` tests use `NullAdapter` to isolate the client from any backend.
 
 ## Code style
