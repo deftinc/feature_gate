@@ -79,6 +79,41 @@ adapter = PostgresAdapter(table_prefix="flags_")            # match the prefix y
 
 When you pass in a connection that is already inside a transaction, the adapter's writes become part of that transaction and are committed only when you commit.
 
+### Logging
+
+FeatureGate logs through [structlog](https://www.structlog.org/). Every adapter takes an optional `logger=`; without one it uses `structlog.get_logger()`, so its logs follow your application's structlog configuration (structlog's default is colored console output on stdout). Log events carry their data as fields (`feature`, `response`, `klass`, and so on), so any structlog renderer can output them.
+
+To get structured JSON logs, pick one of the following.
+
+**JSON from FeatureGate only.** Pass a `json_logger`, which writes one JSON object per line to stdout or to any file you give it, regardless of your structlog configuration:
+
+```python
+import sys
+from feature_gate.adapters import PostgresAdapter
+from feature_gate.structured_logging import json_logger
+
+adapter = PostgresAdapter(logger=json_logger())                       # stdout
+adapter = PostgresAdapter(logger=json_logger(sys.stderr))             # stderr
+adapter = PostgresAdapter(logger=json_logger(open("logs/feature_gate.log", "a")))  # a file
+```
+
+**JSON from your whole application.** Configure structlog globally with FeatureGate's processor chain (or your own ending in `structlog.processors.JSONRenderer()`); adapters created without a `logger=` will pick it up:
+
+```python
+import structlog
+from feature_gate.structured_logging import PROCESSORS
+
+structlog.configure(processors=PROCESSORS)
+```
+
+**Your own logger.** Any structlog-style logger with `info` and `error` methods works, e.g. `MemoryAdapter(logger=structlog.get_logger("feature_gate"))`.
+
+Each line from `json_logger` or `PROCESSORS` looks like:
+
+```json
+{"feature": "test_flag", "response": true, "event": "enable feature", "klass": "PostgresAdapter", "level": "info", "timestamp": "2026-10-26T23:03:18.778271Z"}
+```
+
 ## Usage
 
 ```python

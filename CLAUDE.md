@@ -41,7 +41,7 @@ Large blocks of commented-out methods in `Client` and `PosthogAdapter` are a Fli
 ### Configuration and logging
 
 - `PosthogAPIClient` falls back to env vars `POSTHOG_API_KEY`, `POSTHOG_PROJECT_ID`, and `POSTHOG_API_BASE` (default `https://us.posthog.com`; EU Cloud is `https://eu.posthog.com`) when constructor args are `None`.
-- Adapters/clients call `structlog.configure(...)` globally in `__init__` and write JSON logs to files: `PosthogAPIClient` → `$PROJECT_ROOT/logs/development.log` (append), `MemoryAdapter` → `./logs/feature_gate.log` (truncate). Context is bound with `structlog.contextvars`.
+- Every adapter (and `PosthogAPIClient`) takes `logger=`, defaulting to `structlog.get_logger()` so logs follow the host app's structlog config. The library never calls `structlog.configure`. `feature_gate/structured_logging.py` provides the opt-in JSON options: `json_logger(file=None)` (a self-contained JSON logger, stdout by default) and `PROCESSORS` (a chain for the host's `structlog.configure`); README's "Logging" section documents them. Context is bound with `structlog.contextvars`; log events are fixed strings with data in keyword fields (no f-strings).
 
 ## Testing conventions
 
