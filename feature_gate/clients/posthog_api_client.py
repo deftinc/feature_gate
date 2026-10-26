@@ -3,7 +3,6 @@ import os
 import requests
 import structlog
 
-from pathlib import Path
 from feature_gate.client import FeatureNotFound
 
 from structlog.contextvars import (
@@ -19,7 +18,7 @@ class RateLimitError(Exception):
   pass
 
 class PosthogAPIClient:
-  def __init__(self, api_base=None, api_key=None, project_id=None):
+  def __init__(self, api_base=None, api_key=None, project_id=None, logger=None):
     if api_base is None:
       self.api_base = os.environ.get("POSTHOG_API_BASE", "https://us.posthog.com")
     else:
@@ -36,21 +35,7 @@ class PosthogAPIClient:
       self.project_id = project_id
 
     bind_contextvars(klass="PosthogAPIClient", project_id=project_id)
-    project_root = os.path.abspath(os.getenv('PROJECT_ROOT', '.'))
-    logs_dir_path = Path(project_root, 'logs')
-    logs_dir_path.mkdir(parents=True, exist_ok=True)
-    log_file = logs_dir_path.joinpath('development').with_suffix('.log').open('at')
-    structlog.configure(
-      processors=[
-        merge_contextvars,
-        structlog.processors.add_log_level,
-        structlog.processors.TimeStamper(fmt="iso"),
-        structlog.processors.dict_tracebacks,
-        structlog.processors.JSONRenderer(),
-      ],
-      logger_factory=structlog.WriteLoggerFactory(file=log_file),
-    )
-    self.logger = structlog.get_logger()
+    self.logger = logger or structlog.get_logger()
 
   def logger(self):
     return self.logger
@@ -250,9 +235,9 @@ class PosthogAPIClient:
     }
 
   def _log_posthog_connection_error(self, error):
-    self.logger.error(f"Posthog connection error - {error}")
+    self.logger.error("posthog connection error", error=str(error))
     raise PosthogAPIClientError(f"Posthog connection error - {error}")
 
   def _log_posthog_rate_limit_error(self, error):
-    self.logger.error(f"Posthog rate limit error - {error}")
+    self.logger.error("posthog rate limit error", error=str(error))
     raise RateLimitError(f"Posthog rate limit error error - {error}")

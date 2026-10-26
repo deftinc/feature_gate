@@ -15,3 +15,6 @@ class Feature:
   @property
   def description(self):
     return self._description
+
+  def __repr__(self):
+    return f"Feature(name={self._name!r}, key={self._key!r}, description={self._description!r})"

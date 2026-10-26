@@ -14,8 +14,10 @@ class PostgresAdapter:
   $DATABASE_URL) or an existing psycopg `connection`. With a non-autocommit
   connection that is already inside a transaction, writes join that transaction
   and are committed when the caller commits.
+  `logger` defaults to `structlog.get_logger()`, which follows the host's
+  structlog configuration.
   """
-  def __init__(self, database_url=None, connection=None, table_prefix=None):
+  def __init__(self, database_url=None, connection=None, table_prefix=None, logger=None):
     import psycopg
 
     self._psycopg = psycopg
@@ -28,7 +30,7 @@ class PostgresAdapter:
       raise ValueError("PostgresAdapter needs a database_url, a connection, or FEATURE_GATE_DATABASE_URL/DATABASE_URL")
     self.connection = connection or psycopg.connect(self.database_url, autocommit=True)
     bind_contextvars(klass="PostgresAdapter")
-    self.logger = structlog.get_logger()
+    self.logger = logger or structlog.get_logger()
 
   def connection(self):
     return self.connection
