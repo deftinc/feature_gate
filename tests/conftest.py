@@ -14,7 +14,7 @@ def postgres_url():
   import psycopg
   with psycopg.connect(url, autocommit=True) as connection:
     for prefix in TEST_TABLE_PREFIXES:
-      connection.execute(f"DROP TABLE IF EXISTS {prefix}features, {prefix}schema_migrations")
+      connection.execute(f"DROP TABLE IF EXISTS {prefix}feature_actors, {prefix}features, {prefix}schema_migrations")
       connection.execute(f"DROP FUNCTION IF EXISTS {prefix}uuidv7()")
   return url
 

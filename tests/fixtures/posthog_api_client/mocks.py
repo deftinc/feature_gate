@@ -97,3 +97,35 @@ def mock_rate_limiting_error():
       return_value=load_response('rate_limiting_error')
     )
   )
+
+def mock_features_when_funnel_has_actors():
+  return Mock(
+    status_code=200,
+    json=Mock(
+      return_value=load_response('get_features_when_funnel_has_actors')
+    )
+  )
+
+def mock_features_when_funnel_has_actors_and_catch_all():
+  return Mock(
+    status_code=200,
+    json=Mock(
+      return_value=load_response('get_features_when_funnel_has_actors_and_catch_all')
+    )
+  )
+
+def mock_features_when_funnel_has_unmanaged_condition():
+  return Mock(
+    status_code=200,
+    json=Mock(
+      return_value=load_response('get_features_when_funnel_has_unmanaged_condition')
+    )
+  )
+
+def mock_features_when_funnel_is_enabled():
+  return Mock(
+    status_code=200,
+    json=Mock(
+      return_value=load_response('get_features_when_funnel_is_enabled')
+    )
+  )

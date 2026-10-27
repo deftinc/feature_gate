@@ -1,4 +1,5 @@
 import structlog
+from feature_gate.actor import actor_id, actor_ids
 from feature_gate.client import FeatureNotFound
 
 from structlog.contextvars import (
@@ -25,7 +26,8 @@ class MemoryAdapter:
         "gates": {
           "boolean": {
             "enabled": False
-          }
+          },
+          "actors": []
         }
       })
     return True
@@ -41,10 +43,12 @@ class MemoryAdapter:
     features = [feature["key"] for feature in self._features]
     return features
 
-  def is_enabled(self, feature_key):
+  def is_enabled(self, feature_key, *actors):
+    ids = actor_ids(actors)
     for feature in self._features:
       if feature["key"] == feature_key:
-        is_enabled = feature["gates"]["boolean"]["enabled"]
+        gates = feature["gates"]
+        is_enabled = gates["boolean"]["enabled"] or any(id in gates["actors"] for id in ids)
         return is_enabled
     raise FeatureNotFound(f"Feature {feature_key} not found.")
 
@@ -60,4 +64,28 @@ class MemoryAdapter:
       if feature["key"] == feature_key:
         feature["gates"]["boolean"]["enabled"] = False
         return True
+    raise FeatureNotFound(f"Feature {feature_key} not found.")
+
+  def enable_actor(self, feature_key, actor):
+    id = actor_id(actor)
+    for feature in self._features:
+      if feature["key"] == feature_key:
+        if id not in feature["gates"]["actors"]:
+          feature["gates"]["actors"].append(id)
+        return True
+    raise FeatureNotFound(f"Feature {feature_key} not found.")
+
+  def disable_actor(self, feature_key, actor):
+    id = actor_id(actor)
+    for feature in self._features:
+      if feature["key"] == feature_key:
+        if id in feature["gates"]["actors"]:
+          feature["gates"]["actors"].remove(id)
+        return True
+    raise FeatureNotFound(f"Feature {feature_key} not found.")
+
+  def actors(self, feature_key):
+    for feature in self._features:
+      if feature["key"] == feature_key:
+        return list(feature["gates"]["actors"])
     raise FeatureNotFound(f"Feature {feature_key} not found.")

@@ -14,13 +14,22 @@ class NullAdapter:
   def features(self):
     pass
 
-  def is_enabled(self, feature_key):
+  def is_enabled(self, feature_key, *actors):
     pass
 
   def enable(self, feature_key):
     pass
 
   def disable(self, feature_key):
+    pass
+
+  def enable_actor(self, feature_key, actor):
+    pass
+
+  def disable_actor(self, feature_key, actor):
+    pass
+
+  def actors(self, feature_key):
     pass
 
 class NullLogger:

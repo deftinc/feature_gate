@@ -25,7 +25,7 @@ def test_migrate_creates_tables(postgres_url):
   with psycopg.connect(postgres_url, autocommit=True) as connection:
     applied = migrate(connection)
   assert applied == [version for version, _sql in available_migrations()]
-  assert table_names(postgres_url) == {"feature_gate_features", "feature_gate_schema_migrations"}
+  assert table_names(postgres_url) == {"feature_gate_features", "feature_gate_feature_actors", "feature_gate_schema_migrations"}
 
 def test_uuidv7_function_sets_version_variant_and_timestamp(postgres_url):
   with psycopg.connect(postgres_url, autocommit=True) as connection:
@@ -42,7 +42,7 @@ def test_migrate_with_custom_table_prefix(postgres_url):
     applied = migrate(connection, table_prefix="custom_ff_")
     id = connection.execute("SELECT custom_ff_uuidv7()").fetchone()[0]
   assert applied == [version for version, _sql in available_migrations()]
-  assert table_names(postgres_url, "custom_ff_") == {"custom_ff_features", "custom_ff_schema_migrations"}
+  assert table_names(postgres_url, "custom_ff_") == {"custom_ff_features", "custom_ff_feature_actors", "custom_ff_schema_migrations"}
   assert table_names(postgres_url) == set()
   assert not function_exists(postgres_url, "feature_gate_uuidv7")
   assert id.version == 7
@@ -65,7 +65,7 @@ def test_migrate_rejects_unsafe_table_prefix(postgres_url):
 
 def test_main_reads_table_prefix_from_flag_and_env(postgres_url, monkeypatch):
   assert main(["--database-url", postgres_url, "--table-prefix", "custom_ff_"]) == 0
-  assert table_names(postgres_url, "custom_ff_") == {"custom_ff_features", "custom_ff_schema_migrations"}
+  assert table_names(postgres_url, "custom_ff_") == {"custom_ff_features", "custom_ff_feature_actors", "custom_ff_schema_migrations"}
   monkeypatch.setenv("FEATURE_GATE_TABLE_PREFIX", "custom_ff_")
   assert main(["--database-url", postgres_url]) == 0
   assert table_names(postgres_url) == set()
