@@ -1,6 +1,6 @@
 [project]
 name = "feature_gate"
-version = "0.1.0"
+version = "0.2.0"
 description = "An extensible feature flagging library for Python"
 authors = [{ name = "Patrick Wiseman", email = "patrick@deft.services" }]
 maintainers = [{ name = "Patrick Wiseman", email = "patrick@deft.services" }]
