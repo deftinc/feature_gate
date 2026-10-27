@@ -120,6 +120,12 @@ class PosthogAPIClient:
         response = self._patch(path, payload)
         return self._map_single_response("PATCH", path, response)
 
+  def update_feature(self, feature_id, payload):
+    path = f'/api/projects/{self.project_id}/feature_flags/{feature_id}'
+    with bound_contextvars(method="update_feature"):
+      response = self._patch(path, payload)
+      return self._map_single_response("PATCH", path, response)
+
   def _get(self, path):
     try:
       return self.__get(path)

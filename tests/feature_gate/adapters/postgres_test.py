@@ -4,7 +4,7 @@ import pytest
 from feature_gate.client import Client, FeatureNotFound
 from feature_gate.adapters.postgres import PostgresAdapter
 from feature_gate.feature import Feature
-from feature_gate.migrate import main
+from feature_gate.migrate import available_migrations, main
 
 @pytest.fixture
 def client(migrated_postgres_url):
@@ -159,3 +159,117 @@ def test_requires_a_database_url_or_connection(monkeypatch):
   monkeypatch.delenv("DATABASE_URL", raising=False)
   with pytest.raises(ValueError):
     PostgresAdapter()
+
+class User:
+  def __init__(self, id):
+    self.feature_gate_id = f"user:{id}"
+
+def test_enable_actor_enables_feature_for_that_actor_only(client):
+  client.add(build_feature())
+  assert client.enable_actor("test_feature", "user:1")
+  assert client.is_enabled("test_feature", "user:1")
+  assert not client.is_enabled("test_feature", "user:2")
+  assert not client.is_enabled("test_feature")
+
+def test_is_enabled_when_any_actor_is_enabled(client):
+  client.add(build_feature())
+  client.enable_actor("test_feature", "org:7")
+  assert client.is_enabled("test_feature", "user:1", "org:7")
+  assert not client.is_enabled("test_feature", "user:1", "org:8")
+
+def test_is_enabled_skips_none_actors(client):
+  client.add(build_feature())
+  client.enable_actor("test_feature", "user:1")
+  assert client.is_enabled("test_feature", "user:1", None)
+  assert not client.is_enabled("test_feature", None)
+
+def test_globally_enabled_feature_is_enabled_for_every_actor(client):
+  client.add(build_feature())
+  client.enable("test_feature")
+  assert client.is_enabled("test_feature", "user:2")
+
+def test_disable_keeps_enabled_actors(client):
+  client.add(build_feature())
+  client.enable_actor("test_feature", "user:1")
+  client.enable("test_feature")
+  client.disable("test_feature")
+  assert client.is_enabled("test_feature", "user:1")
+  assert not client.is_enabled("test_feature", "user:2")
+
+def test_disable_actor_disables_feature_for_that_actor(client):
+  client.add(build_feature())
+  client.enable_actor("test_feature", "user:1")
+  assert client.disable_actor("test_feature", "user:1")
+  assert not client.is_enabled("test_feature", "user:1")
+  assert client.actors("test_feature") == []
+
+def test_enable_and_disable_actor_are_idempotent(client):
+  client.add(build_feature())
+  assert client.enable_actor("test_feature", "user:1")
+  assert client.enable_actor("test_feature", "user:1")
+  assert client.actors("test_feature") == ["user:1"]
+  assert client.disable_actor("test_feature", "user:1")
+  assert client.disable_actor("test_feature", "user:1")
+  assert client.actors("test_feature") == []
+
+def test_actors_are_listed_in_the_order_added(client):
+  client.add(build_feature())
+  for actor in ["user:2", "org:7", "user:1"]:
+    client.enable_actor("test_feature", actor)
+  assert client.actors("test_feature") == ["user:2", "org:7", "user:1"]
+
+def test_actors_are_scoped_to_their_feature(client):
+  client.add(build_feature())
+  client.add(build_feature("other_feature"))
+  client.enable_actor("test_feature", "user:1")
+  assert client.actors("other_feature") == []
+  assert not client.is_enabled("other_feature", "user:1")
+
+def test_actor_objects_use_their_feature_gate_id(client):
+  client.add(build_feature())
+  client.enable_actor("test_feature", User(1))
+  assert client.actors("test_feature") == ["user:1"]
+  assert client.is_enabled("test_feature", User(1))
+  assert client.is_enabled("test_feature", "user:1")
+
+def test_enable_actor_rejects_none(client):
+  client.add(build_feature())
+  with pytest.raises(TypeError):
+    client.enable_actor("test_feature", None)
+
+def test_remove_deletes_the_features_actors(client, migrated_postgres_url):
+  client.add(build_feature())
+  client.enable_actor("test_feature", "user:1")
+  client.remove("test_feature")
+  with psycopg.connect(migrated_postgres_url) as connection:
+    count = connection.execute("SELECT count(*) FROM feature_gate_feature_actors").fetchone()[0]
+  assert count == 0
+
+def test_custom_table_prefix_uses_its_own_actors_table(migrated_postgres_url):
+  main(["--database-url", migrated_postgres_url, "--table-prefix", "custom_ff_"])
+  adapter = PostgresAdapter(database_url=migrated_postgres_url, table_prefix="custom_ff_")
+  adapter.add(build_feature())
+  adapter.enable_actor("test_feature", "user:1")
+  with psycopg.connect(migrated_postgres_url) as connection:
+    count = connection.execute("SELECT count(*) FROM custom_ff_feature_actors").fetchone()[0]
+  assert count == 1
+  adapter.connection.close()
+
+def test_is_enabled_without_actors_works_before_the_actors_migration(postgres_url):
+  _version, sql = available_migrations()[0]
+  with psycopg.connect(postgres_url, autocommit=True) as connection:
+    connection.execute(sql)
+    connection.execute("INSERT INTO feature_gate_features (key, enabled) VALUES ('test_feature', true)")
+  adapter = PostgresAdapter(database_url=postgres_url)
+  assert adapter.is_enabled("test_feature")
+  adapter.connection.close()
+
+@pytest.mark.parametrize("call", [
+  lambda client: client.enable_actor("test_feature", "user:1"),
+  lambda client: client.disable_actor("test_feature", "user:1"),
+  lambda client: client.actors("test_feature"),
+  lambda client: client.is_enabled("test_feature", "user:1"),
+])
+def test_actor_methods_raise_when_feature_not_found(client, call):
+  with pytest.raises(FeatureNotFound):
+    call(client)

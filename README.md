@@ -39,7 +39,7 @@ feature-gate-migrate --database-url postgresql://...  # or pass it explicitly
 feature-gate-migrate --table-prefix flags_            # uses FEATURE_GATE_TABLE_PREFIX, then feature_gate_
 ```
 
-The migrations create the tables and function described under [Schema](#schema). Running the command again only applies new migrations. Each prefix has its own migration history, so two prefixes can live side by side in one database. A PostgreSQL advisory lock stops two deploys from migrating at the same time. To run migrations from Python, for example inside your own migration tool, use `feature_gate.migrate.migrate(connection, table_prefix="feature_gate_")` with an autocommit psycopg connection.
+The migrations create the tables and function described in [Schema](#schema). Running the command again only applies new migrations. Each prefix has its own migration history, so two prefixes can live side by side in one database. A PostgreSQL advisory lock stops two deploys from migrating at the same time. To run migrations from Python, for example inside your own migration tool, use `feature_gate.migrate.migrate(connection, table_prefix="feature_gate_")` with an autocommit psycopg connection.
 
 #### Schema
 
@@ -56,6 +56,15 @@ The names below use the default `feature_gate_` prefix; with a custom prefix, sw
 | `enabled`     | `boolean`     | `NOT NULL`, defaults to `false`. A new feature starts out disabled.    |
 | `created_at`  | `timestamptz` | `NOT NULL`, defaults to `now()`.                                       |
 | `updated_at`  | `timestamptz` | `NOT NULL`, defaults to `now()`. Updated by `enable` and `disable`.    |
+
+`feature_gate_feature_actors` has one row for each actor a feature is enabled for (see [Actors](#actors)):
+
+| Column       | Type          | Notes                                                                 |
+|--------------|---------------|-----------------------------------------------------------------------|
+| `id`         | `uuid`        | Primary key, a UUIDv7 that defaults to `feature_gate_uuidv7()`. `actors()` orders by it. |
+| `feature_id` | `uuid`        | `NOT NULL`, references `feature_gate_features (id)` `ON DELETE CASCADE`, so `remove` deletes a feature's actors too. |
+| `actor_id`   | `text`        | `NOT NULL`. The actor's id, e.g. `user:42`. `UNIQUE` together with `feature_id`. |
+| `created_at` | `timestamptz` | `NOT NULL`, defaults to `now()`.                                       |
 
 `feature_gate_schema_migrations` has one row for each migration that has been applied:
 
@@ -155,6 +164,41 @@ client.remove("test_flag")
 client.features()
 # => []
 ```
+
+### Actors
+
+Turn a feature on for particular users or groups without turning it on for everyone. An actor is either a string you namespace yourself, or any object with a `feature_gate_id` attribute. Bare integers are rejected so that user 42 and org 42 can't be confused.
+
+```python
+class User:
+  @property
+  def feature_gate_id(self):
+    return f"user:{self.id}"
+
+client.enable_actor("test_flag", "org:7")
+# => True
+
+client.enable_actor("test_flag", user)  # stored as "user:42"
+# => True
+
+client.actors("test_flag")
+# => ["org:7", "user:42"]
+
+client.is_enabled("test_flag")
+# => False, the feature is still off for everyone else
+
+client.is_enabled("test_flag", user, user.org)  # True if the feature is on for any actor you pass
+# => True
+
+client.disable_actor("test_flag", "org:7")
+# => True
+```
+
+`is_enabled(key, *actors)` is true when the feature is enabled globally or for any of the actors. FeatureGate doesn't know who belongs to which group, so pass the user together with their groups. `None` actors are skipped, so `is_enabled("test_flag", user, user.org)` works for a user without an org. `enable` and `disable` only change the global switch: after `disable`, actors you enabled still get the feature until you call `disable_actor`. Actors are an ordered set; enabling an actor twice or disabling one that isn't enabled does nothing.
+
+With the `PostgresAdapter`, run `feature-gate-migrate` after upgrading to create the `feature_actors` table. Until you do, `is_enabled(key)` without actors keeps working, but the actor methods fail.
+
+With the `PosthogAdapter`, actors are stored as a release condition on the flag (`distinct_id` exactly matches one of the actor ids), and `is_enabled` evaluates the flag itself from that condition. FeatureGate manages that condition and the catch-all "everyone" condition. It doesn't touch any other conditions you create in PostHog, but those are live while the flag is active, including after `disable` when actors keep it active. `enable_actor` raises `ValueError` on an inactive flag that has such conditions rather than switching them on. Check actors through FeatureGate: whether PostHog's own SDKs match this `distinct_id` condition hasn't been verified, and group ids such as `org:7` would only match a person whose distinct ID is literally that string.
 
 ## Errors
 

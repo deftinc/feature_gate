@@ -1,3 +1,5 @@
+from feature_gate.actor import actor_id, actor_ids
+
 class FeatureNotFound(ValueError):
   pass
 
@@ -25,9 +27,9 @@ class Client:
   def features(self):
     return self.adapter.features()
 
-  def is_enabled(self, feature):
-    response = self.adapter.is_enabled(feature)
-    self.logger.info("feature is_enabled", feature=feature, response=response)
+  def is_enabled(self, feature, *actors):
+    response = self.adapter.is_enabled(feature, *actors)
+    self.logger.info("feature is_enabled", feature=feature, actors=actor_ids(actors), response=response)
     return response
 
   def enable(self, feature):
@@ -39,6 +41,19 @@ class Client:
     response = self.adapter.disable(feature)
     self.logger.info("disable feature", feature=feature, response=response)
     return response
+
+  def enable_actor(self, feature, actor):
+    response = self.adapter.enable_actor(feature, actor)
+    self.logger.info("enable feature for actor", feature=feature, actor=actor_id(actor), response=response)
+    return response
+
+  def disable_actor(self, feature, actor):
+    response = self.adapter.disable_actor(feature, actor)
+    self.logger.info("disable feature for actor", feature=feature, actor=actor_id(actor), response=response)
+    return response
+
+  def actors(self, feature):
+    return self.adapter.actors(feature)
 
   # def enable_expression(self, expression):
   #   raise NotImplementedError
@@ -53,12 +68,6 @@ class Client:
   #   raise NotImplementedError
 
   # def remove_expression(self, expression):
-  #   raise NotImplementedError
-
-  # def enable_actor(self, feature, actor):
-  #   raise NotImplementedError
-
-  # def disable_actor(self, feature, actor):
   #   raise NotImplementedError
 
   # def enable_group(self, feature, group):
